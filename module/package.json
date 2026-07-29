@@ -1,0 +1,20 @@
+{
+  "name": "exigency-management-module",
+  "version": "1.0.0",
+  "description": "Standalone Exigency Management System module: Express + SQLite backend, own dashboard UI, receives Google Form submissions via webhook. No Google Sheets required.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.14"
+  }
+}
