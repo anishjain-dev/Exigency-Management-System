@@ -133,21 +133,32 @@ function updateSchoolSheets(onlyRowNumber) {
 }
 
 /**
- * Extracts a school code from the raw "School" form field. Supports either
- * the code itself (e.g. "FSK") or a longer label containing it
- * (e.g. "FSK - Kingston Campus").
+ * Extracts a school code from the raw "School" form field. Resolution order:
+ *   1. Settings!SchoolMap exact match (full dropdown label -> code) — needed
+ *      when the Form shows full school names rather than bare codes.
+ *   2. The code itself (e.g. "FSK").
+ *   3. A longer label that contains the code (e.g. "FSK - Kingston Campus").
  * @param {string} rawSchoolValue
  * @param {Object} config
  * @return {string}
  * @private
  */
 function extractSchoolCode_(rawSchoolValue, config) {
-  const value = String(rawSchoolValue || '').trim().toUpperCase();
+  const value = String(rawSchoolValue || '').trim();
   if (!value) return '';
-  const direct = config.schoolCodes.find(function (code) { return code.toUpperCase() === value; });
+  const valueUpper = value.toUpperCase();
+  const valueLower = value.toLowerCase();
+
+  const mappedCode = Object.keys(config.schoolMap || {}).find(function (code) {
+    return config.schoolMap[code] === valueLower;
+  });
+  if (mappedCode) return mappedCode;
+
+  const direct = config.schoolCodes.find(function (code) { return code.toUpperCase() === valueUpper; });
   if (direct) return direct;
-  const contained = config.schoolCodes.find(function (code) { return value.indexOf(code.toUpperCase()) !== -1; });
-  return contained || value;
+
+  const contained = config.schoolCodes.find(function (code) { return valueUpper.indexOf(code.toUpperCase()) !== -1; });
+  return contained || valueUpper;
 }
 
 /**

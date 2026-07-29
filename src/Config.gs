@@ -14,6 +14,11 @@
  *   AdminEmail              "admin@example.org"
  *   DefaultCC               "cc1@example.org,cc2@example.org"
  *   SchoolCodes              "FSK,FSA,FSL"           comma list, sheet = "<code> Emails"
+ *   SchoolMap                "FSK=Fountainhead School Kukatpally;FSA=Fountainhead School Almasguda"
+ *                                                     semicolon-separated CODE=Full Dropdown Text
+ *                                                     pairs, needed whenever the Form's School
+ *                                                     Selection question shows full names/labels
+ *                                                     rather than the bare code itself.
  *   StatusList               "Open,In Progress,Snoozed,Closed"
  *   ClosedStatus             "Closed"
  *   StatusColor:Open         "#FBBC04"
@@ -88,6 +93,7 @@ function buildConfigFromSheet_() {
   const schoolCodes = splitCsv_(raw.SchoolCodes || raw.SchoolCodesList || '');
   const statusList = splitCsv_(raw.StatusList || '');
   const defaultCc = splitCsv_(raw.DefaultCC || raw.DefaultCc || '');
+  const schoolMap = parseSchoolMap_(raw.SchoolMap || '');
 
   return {
     reminderTime: String(raw.ReminderTime || '08:00').trim(),
@@ -96,6 +102,7 @@ function buildConfigFromSheet_() {
     adminEmail: String(raw.AdminEmail || '').trim(),
     defaultCc: defaultCc,
     schoolCodes: schoolCodes.length ? schoolCodes : ['FSK', 'FSA', 'FSL'],
+    schoolMap: schoolMap,
     statusList: statusList.length ? statusList : DEFAULT_STATUS_LIST.slice(),
     closedStatus: String(raw.ClosedStatus || CLOSED_STATUS).trim(),
     statusColors: Object.keys(statusColors).length ? statusColors : {
@@ -121,6 +128,29 @@ function splitCsv_(value) {
     .split(',')
     .map(function (s) { return s.trim(); })
     .filter(function (s) { return s.length > 0; });
+}
+
+/**
+ * Parses a "CODE=Full Dropdown Text;CODE2=Full Text 2" config value into a
+ * { CODE: 'full text lowercased & trimmed' } map, used to resolve a Form's
+ * full School Selection label back to its short school code.
+ * @param {string} value
+ * @return {Object<string, string>}
+ * @private
+ */
+function parseSchoolMap_(value) {
+  const map = {};
+  String(value || '')
+    .split(';')
+    .map(function (pair) { return pair.trim(); })
+    .filter(function (pair) { return pair.indexOf('=') !== -1; })
+    .forEach(function (pair) {
+      const idx = pair.indexOf('=');
+      const code = pair.substring(0, idx).trim().toUpperCase();
+      const label = pair.substring(idx + 1).trim().toLowerCase();
+      if (code && label) map[code] = label;
+    });
+  return map;
 }
 
 /**
@@ -166,6 +196,7 @@ function ensureSettingsSheet_() {
     ['AdminEmail', ''],
     ['DefaultCC', ''],
     ['SchoolCodes', 'FSK,FSA,FSL'],
+    ['SchoolMap', ''],
     ['StatusList', DEFAULT_STATUS_LIST.join(',')],
     ['ClosedStatus', CLOSED_STATUS],
     ['StatusColor:Open', '#FBBC04'],
