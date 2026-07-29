@@ -242,6 +242,24 @@ function readRowsAsObjects_(sheet) {
 }
 
 /**
+ * Ensures the master sheet has all system columns AND all tracking columns
+ * (Owner, Follow-up Date, Status, Next Due Date, Closed Date) that this
+ * Form does not natively collect. Appends any that are missing, in a fixed
+ * order, and returns the refreshed column map. Safe to call repeatedly —
+ * ensureColumns_ is a no-op for headers that already exist.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} master
+ * @return {Object<string, number>}
+ */
+function ensureMasterColumns_(master) {
+  return ensureColumns_(master, TRACKING_COLUMNS.concat([
+    SYSTEM_COLUMNS.EXIGENCY_ID,
+    SYSTEM_COLUMNS.LAST_REMINDER_DATE,
+    SYSTEM_COLUMNS.REMINDER_COUNT,
+    SYSTEM_COLUMNS.SYNC_STATUS
+  ]));
+}
+
+/**
  * Safely retrieves a named script lock, runs `fn` while holding it, then
  * releases it. Prevents concurrent form submissions from racing on ID
  * generation / sheet appends.

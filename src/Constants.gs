@@ -11,7 +11,7 @@
  */
 
 const SYSTEM_SHEETS = Object.freeze({
-  MASTER: 'Form Responses 3',
+  MASTER: 'Form_Responses2',
   LOGS: 'Logs',
   DASHBOARD: 'Dashboard',
   SETTINGS: 'Settings'
@@ -37,8 +37,8 @@ const SYSTEM_COLUMNS = Object.freeze({
  */
 const DATA_COLUMNS = Object.freeze({
   TIMESTAMP: 'Timestamp',
-  SCHOOL: 'School',
-  ISSUE: 'Issue',
+  SCHOOL: 'School Selection',
+  ISSUE: 'Describe the Incident',
   OWNER: 'Owner',
   SUBMITTER_EMAIL: 'Email Address',
   FOLLOWUP_DATE: 'Follow-up Date',
@@ -50,6 +50,23 @@ const DATA_COLUMNS = Object.freeze({
   RESPONSE_TIME_HOURS: 'Response Time (hrs)',
   RESOLUTION_TIME_HOURS: 'Resolution Time (hrs)'
 });
+
+/**
+ * Tracking columns (Owner, Follow-up Date, Status, Next Due Date, Closed
+ * Date) that this particular Form does NOT collect from submitters. They
+ * are appended blank to the master sheet by ensureMasterColumns_ (see
+ * Utilities.gs) so an admin/owner can fill them in per record after
+ * submission. If a future Form revision adds these as real questions,
+ * ensureColumns_ is a no-op for any header that already exists, so nothing
+ * needs to change here.
+ */
+const TRACKING_COLUMNS = Object.freeze([
+  DATA_COLUMNS.OWNER,
+  DATA_COLUMNS.FOLLOWUP_DATE,
+  DATA_COLUMNS.STATUS,
+  DATA_COLUMNS.NEXT_DUE_DATE,
+  DATA_COLUMNS.CLOSED_DATE
+]);
 
 /** Two-block layout of a per-school sheet. See ARCHITECTURE.md #5. */
 const SCHOOL_SHEET_LAYOUT = Object.freeze({

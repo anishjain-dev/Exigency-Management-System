@@ -31,14 +31,9 @@ function handleFormSubmit_(e) {
     throw new Error('Master sheet "' + SYSTEM_SHEETS.MASTER + '" not found.');
   }
 
-  // Ensure system columns exist before reading the row, so column indices
-  // below are correct even on the very first submission.
-  ensureColumns_(master, [
-    SYSTEM_COLUMNS.EXIGENCY_ID,
-    SYSTEM_COLUMNS.LAST_REMINDER_DATE,
-    SYSTEM_COLUMNS.REMINDER_COUNT,
-    SYSTEM_COLUMNS.SYNC_STATUS
-  ]);
+  // Ensure system + tracking columns exist before reading the row, so column
+  // indices below are correct even on the very first submission.
+  ensureMasterColumns_(master);
 
   // Resolve which row was just submitted. e.range is reliable for installable
   // form-submit triggers bound to the response sheet.

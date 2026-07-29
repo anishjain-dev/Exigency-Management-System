@@ -27,12 +27,7 @@ function initializeSystem() {
       throw new Error('Expected master sheet "' + SYSTEM_SHEETS.MASTER + '" was not found. ' +
         'Create/rename the Form response sheet to this name before initializing.');
     }
-    ensureColumns_(master, [
-      SYSTEM_COLUMNS.EXIGENCY_ID,
-      SYSTEM_COLUMNS.LAST_REMINDER_DATE,
-      SYSTEM_COLUMNS.REMINDER_COUNT,
-      SYSTEM_COLUMNS.SYNC_STATUS
-    ]);
+    ensureMasterColumns_(master);
 
     config.schoolCodes.forEach(function (code) { ensureSchoolSheet_(code); });
 

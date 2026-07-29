@@ -58,12 +58,7 @@ function ensureSchoolSheet_(schoolCode) {
 function getMasterHeaders_() {
   const master = getEmsSpreadsheet_().getSheetByName(SYSTEM_SHEETS.MASTER);
   if (!master) return [];
-  ensureColumns_(master, [
-    SYSTEM_COLUMNS.EXIGENCY_ID,
-    SYSTEM_COLUMNS.LAST_REMINDER_DATE,
-    SYSTEM_COLUMNS.REMINDER_COUNT,
-    SYSTEM_COLUMNS.SYNC_STATUS
-  ]);
+  ensureMasterColumns_(master);
   const lastCol = master.getLastColumn();
   return master.getRange(1, 1, 1, lastCol).getValues()[0];
 }

@@ -35,12 +35,7 @@ function processReminders_() {
   if (!master) throw new Error('Master sheet not found.');
 
   const config = loadConfiguration();
-  const colMap = ensureColumns_(master, [
-    SYSTEM_COLUMNS.EXIGENCY_ID,
-    SYSTEM_COLUMNS.LAST_REMINDER_DATE,
-    SYSTEM_COLUMNS.REMINDER_COUNT,
-    SYSTEM_COLUMNS.SYNC_STATUS
-  ]);
+  const colMap = ensureMasterColumns_(master);
 
   const lastRow = master.getLastRow();
   if (lastRow < 2) return;
