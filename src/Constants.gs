@@ -11,7 +11,7 @@
  */
 
 const SYSTEM_SHEETS = Object.freeze({
-  MASTER: 'Form_Responses2',
+  MASTER: 'Form Responses',
   LOGS: 'Logs',
   DASHBOARD: 'Dashboard',
   SETTINGS: 'Settings'
