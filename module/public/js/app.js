@@ -223,7 +223,7 @@ document.getElementById('addDeptForm').addEventListener('submit', async (e) => {
 });
 
 const SETTINGS_FIELDS = [
-  'AdminEmail', 'DefaultCC', 'OrgDomain', 'FsGroupEmail', 'ForceRecipientEmail',
+  'MailingEnabled', 'AdminEmail', 'DefaultCC', 'OrgDomain', 'FsGroupEmail', 'ForceRecipientEmail',
   'ReminderTriggerHour', 'DashboardTriggerHour'
 ];
 

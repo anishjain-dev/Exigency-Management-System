@@ -54,11 +54,11 @@ function statusPillStyle(color) {
 
 /**
  * If Settings!ForceRecipientEmail is set (comma-separated, one or more
- * addresses), every outgoing mail (reminder AND new-submission notification)
- * is redirected to ONLY those addresses — real department/CC recipients are
- * computed as normal upstream but replaced here, so switching this off later
- * requires no other code change. The originally intended recipients are
- * preserved in the log message for visibility.
+ * addresses), those addresses are ADDED to every outgoing mail (reminder AND
+ * new-submission notification) alongside the real department/CC recipients —
+ * the real recipient still gets notified, and these extra addresses always
+ * get a copy too. (Previously this fully replaced recipients; changed so
+ * both the concerned person AND the configured extra addresses receive it.)
  * @param {Array<string>} to
  * @param {Array<string>} cc
  * @return {{to: Array<string>, cc: Array<string>, overridden: boolean, originalTo: Array<string>, originalCc: Array<string>}}
@@ -68,10 +68,13 @@ function applyRecipientOverride(to, cc) {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+  const originalTo = to || [];
+  const originalCc = cc || [];
   if (forceEmails.length === 0) {
-    return { to: to || [], cc: cc || [], overridden: false, originalTo: to || [], originalCc: cc || [] };
+    return { to: originalTo, cc: originalCc, overridden: false, originalTo, originalCc };
   }
-  return { to: forceEmails, cc: [], overridden: true, originalTo: to || [], originalCc: cc || [] };
+  const mergedTo = Array.from(new Set([...originalTo, ...forceEmails]));
+  return { to: mergedTo, cc: originalCc, overridden: true, originalTo, originalCc };
 }
 
 function buildHtmlEmail(record, appUrl) {
@@ -142,7 +145,22 @@ function buildHtmlEmail(record, appUrl) {
 </div>`;
 }
 
+/**
+ * Master kill-switch: when Settings!MailingEnabled is explicitly 'false',
+ * no mail goes out to anyone at all (reminders or new-submission notices).
+ * Records are still saved/updated normally — only the email send is skipped.
+ * @return {boolean}
+ */
+function isMailingEnabled() {
+  return String(getAllSettings().MailingEnabled ?? 'true').trim().toLowerCase() !== 'false';
+}
+
 async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUrl) {
+  if (!isMailingEnabled()) {
+    writeLog({ recordId: record.id, type: reminderType, status: 'SKIPPED', message: 'Mailing is disabled (Settings!MailingEnabled=false).' });
+    return false;
+  }
+
   const settings = getAllSettings();
   const ccFallback = (ccEmails && ccEmails.length ? ccEmails : String(settings.DefaultCC || '').split(',').map((s) => s.trim()).filter(Boolean));
   const { to: recipients, cc, overridden, originalTo } = applyRecipientOverride(toEmails, ccFallback);
@@ -152,7 +170,7 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
     return false;
   }
 
-  const overrideNote = overridden ? ` [TEST MODE: originally intended for ${originalTo.join(', ') || 'nobody'}]` : '';
+  const overrideNote = overridden ? ` [+CC: also sent to ForceRecipientEmail list]` : '';
 
   try {
     const transport = getTransport();
@@ -230,6 +248,11 @@ function buildSubmissionTableHtml(record) {
  * @return {Promise<boolean>}
  */
 async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
+  if (!isMailingEnabled()) {
+    writeLog({ recordId: record.id, type: 'NEW_SUBMISSION', status: 'SKIPPED', message: 'Mailing is disabled (Settings!MailingEnabled=false).' });
+    return false;
+  }
+
   const { to: recipients, cc, overridden, originalTo } = applyRecipientOverride(toEmails, ccEmails);
 
   if (recipients.length === 0) {
@@ -237,7 +260,7 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
     return false;
   }
 
-  const overrideNote = overridden ? ` [TEST MODE: originally intended for ${originalTo.join(', ') || 'nobody'}]` : '';
+  const overrideNote = overridden ? ` [+CC: also sent to ForceRecipientEmail list]` : '';
   const criticalPrefix = record.critical ? '[CRITICAL] ' : '';
   const html = `
     <div style="font-family:arial,sans,sans-serif;">

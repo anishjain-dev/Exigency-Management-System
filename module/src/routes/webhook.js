@@ -27,13 +27,16 @@ const router = express.Router();
 function isAuthorizedSubmitter(email) {
   if (!email) return false;
   const value = String(email).trim().toLowerCase();
-  const fsGroupEmail = String(getSetting('FsGroupEmail', '') || '').trim().toLowerCase();
-  if (fsGroupEmail && value === fsGroupEmail) return true;
 
-  const orgDomain = String(getSetting('OrgDomain', '') || '').trim().toLowerCase().replace(/^@/, '');
-  if (orgDomain) return value.endsWith('@' + orgDomain);
+  const fsGroupEmails = String(getSetting('FsGroupEmail', '') || '')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (fsGroupEmails.includes(value)) return true;
 
-  return false;
+  // Supports one or more comma-separated domains, e.g.
+  // "fountainheadschools.org,protego.services" — any match authorizes.
+  const orgDomains = String(getSetting('OrgDomain', '') || '')
+    .split(',').map((s) => s.trim().toLowerCase().replace(/^@/, '')).filter(Boolean);
+  return orgDomains.some((domain) => value.endsWith('@' + domain));
 }
 
 router.post('/form-submit', async (req, res) => {

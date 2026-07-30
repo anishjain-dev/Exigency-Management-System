@@ -100,6 +100,10 @@ function seedDefaults() {
     // notifications) is redirected to only this address, regardless of the
     // real department recipients. Clear this value to resume real routing.
     ForceRecipientEmail: '',
+    // Master kill-switch: set to 'false' to stop ALL outgoing mail (reminders
+    // and new-submission notices) to everyone, without touching any other
+    // config. Records still save/update normally either way.
+    MailingEnabled: 'true',
     ResolvedValue: 'Yes',
     ReminderTriggerHour: '8',
     DashboardTriggerHour: '9',
