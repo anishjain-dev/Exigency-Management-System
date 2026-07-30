@@ -196,20 +196,20 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
  */
 function buildSubmissionTableHtml(record) {
   const fields = [
-    ['Exigency ID', record.id],
-    ['School', record.school_code],
-    ['Department', record.department],
-    ['Critical Issue', record.critical ? 'Yes' : 'No'],
+    ['Form Number', record.id],
+    ['Timestamp', fmtDate(record.created_at)],
+    ['Form Filled by', record.submitter_email],
+    ['School Selection', record.school_raw || record.school_code],
+    ['Date of the Incident', fmtDate(record.date_of_incident)],
     ['Location', record.location],
-    ['Date of Incident', fmtDate(record.date_of_incident)],
+    ['Department', record.department],
+    ['Is this a Critical Issue?', record.critical ? 'Yes' : 'No'],
     ['Describe the Incident', record.issue],
-    ['Immediate Actions Taken', record.immediate_actions],
-    ['Attachments', record.attachments],
+    ['Photos/videos/documents', record.attachments],
+    ['What immediate actions were taken?', record.immediate_actions],
     ['Has the issue been resolved?', record.resolved],
-    ['Expected Closure Date', fmtDate(record.closure_date)],
-    ['Suggested Policy/Process Change', record.suggested_changes],
-    ['Submitted By', record.submitter_email],
-    ['Timestamp', fmtDate(record.created_at)]
+    ['If NOT RESOLVED, please specify the closure date.', fmtDate(record.closure_date)],
+    ['Any suggested Policy, Training, Infra, Services or Process change required?', record.suggested_changes]
   ];
 
   const headerCellStyle = 'overflow:hidden;padding:2px 3px;vertical-align:bottom;background-color:rgb(139,195,74);font-weight:bold;color:#ffffff;';
