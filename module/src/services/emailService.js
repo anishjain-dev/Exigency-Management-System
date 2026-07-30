@@ -48,8 +48,82 @@ function fmtDate(iso) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function statusPillStyle(color) {
-  return `display:inline-block;padding:2px 10px;border-radius:12px;background:${color};color:#ffffff;font-size:12px;font-weight:600;`;
+/**
+ * Fountainhead brand system (Brand Guidelines 2025): primary blue #005BAA,
+ * red #B8292F, yellow accent #F2C418, used at a 45/45/10 ratio. Montserrat
+ * for headline/wordmark text, Nunito for body — both declared with safe
+ * fallback stacks since most email clients ignore @font-face/webfonts.
+ */
+const BRAND = {
+  blue: '#005BAA',
+  blueDeep: '#003c73',
+  red: '#B8292F',
+  yellow: '#F2C418',
+  tintBlue: '#eef4fa',
+  ink: '#1a2230',
+  sub: '#5b6472',
+  headFont: "'Montserrat','Segoe UI',Arial,sans-serif",
+  bodyFont: "'Nunito','Segoe UI',Arial,sans-serif"
+};
+
+function badgePill(text, bg) {
+  return `<span style="display:inline-block;padding:2px 10px;border-radius:100px;background:${bg};color:#ffffff;font-size:11.5px;font-weight:700;font-family:${BRAND.headFont};">${escapeHtml(text)}</span>`;
+}
+
+/**
+ * Shared letterhead header used by every outgoing email: the real
+ * Fountainhead logo on white (the logo's own blue/red would disappear on a
+ * blue band), then the brand's own 45/45/10 colour-proportion chart
+ * rendered as a thin rule directly beneath it.
+ * @param {string} title
+ * @param {string} subtitle
+ * @param {string} appUrl - absolute origin, e.g. "http://localhost:4000", so the logo resolves in an email client
+ * @return {string}
+ */
+function brandMasthead(title, subtitle, appUrl) {
+  return `
+  <tr>
+    <td style="background:#ffffff;padding:22px 26px 18px;">
+      <img src="${appUrl}/images/fountainhead-logo.png" alt="Fountainhead" height="28" style="height:28px;width:auto;display:block;margin-bottom:14px;" />
+      <div style="font-family:${BRAND.headFont};color:${BRAND.blue};font-size:20px;font-weight:800;">${escapeHtml(title)}</div>
+      ${subtitle ? `<div style="font-family:${BRAND.bodyFont};color:${BRAND.sub};font-size:13px;margin-top:3px;">${subtitle}</div>` : ''}
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0;">
+      <table cellspacing="0" cellpadding="0" width="100%"><tr>
+        <td width="45%" style="height:5px;background:${BRAND.blue};font-size:0;line-height:0;">&nbsp;</td>
+        <td width="45%" style="height:5px;background:${BRAND.red};font-size:0;line-height:0;">&nbsp;</td>
+        <td width="10%" style="height:5px;background:${BRAND.yellow};font-size:0;line-height:0;">&nbsp;</td>
+      </tr></table>
+    </td>
+  </tr>`;
+}
+
+/** Shared footer band, closes out every outgoing email. */
+function brandFooter() {
+  return `
+  <tr>
+    <td style="background:${BRAND.tintBlue};padding:14px 26px;border-top:1px solid #dbe6f0;">
+      <p style="margin:0;font-family:${BRAND.bodyFont};font-size:11px;color:${BRAND.sub};">
+        Fountainhead &middot; Exigency Management System &mdash; automated notification, please do not reply.
+      </p>
+    </td>
+  </tr>`;
+}
+
+/**
+ * Renders a label/value field table with the brand's alternating-tint rows
+ * and blue label column. @param {Array<[string, string]>} rows
+ */
+function brandFieldTable(rows) {
+  const labelStyle = `padding:10px 16px;font-family:${BRAND.headFont};font-size:12.5px;font-weight:700;width:42%;color:${BRAND.blue};vertical-align:top;`;
+  const valueStyle = `padding:10px 16px;font-family:${BRAND.bodyFont};font-size:13.5px;vertical-align:top;color:${BRAND.ink};`;
+  return rows.map(([label, value], i) => `
+    <tr style="${i % 2 === 0 ? '' : `background:${BRAND.tintBlue};`}">
+      <td style="${labelStyle}">${escapeHtml(label)}</td>
+      <td style="${valueStyle}">${value}</td>
+    </tr>`).join('');
 }
 
 /**
@@ -75,67 +149,45 @@ function applyRecipientOverride(to, cc) {
 }
 
 function buildHtmlEmail(record, appUrl) {
-  const settings = getAllSettings();
-  const resolvedColor = settings.ResolvedColor || '#34A853';
-  const unresolvedColor = settings.UnresolvedColor || '#FBBC04';
-  const criticalColor = settings.CriticalColor || '#EA4335';
   const resolved = record.resolved || 'No';
-  const statusColor = resolved === 'Yes' ? resolvedColor : unresolvedColor;
   const pendingSince = daysBetween(record.created_at);
 
   const rows = [
-    ['Exigency ID', escapeHtml(record.id)],
-    ['School', escapeHtml(record.school_code)],
+    ['Form Number', escapeHtml(record.id)],
+    ['School Selection', escapeHtml(record.school_raw || record.school_code)],
     ['Department', escapeHtml(record.department)],
-    ['Critical', record.critical
-      ? `<span style="${statusPillStyle(criticalColor)}">CRITICAL</span>`
-      : 'No'],
-    ['Location', escapeHtml(record.location)],
-    ['Issue', escapeHtml(record.issue)],
-    ['Immediate Actions Taken', escapeHtml(record.immediate_actions) || 'N/A'],
+    ['Is this a Critical Issue?', record.critical ? badgePill('CRITICAL', BRAND.red) : 'No'],
+    ['Location', escapeHtml(record.location) || 'N/A'],
+    ['Describe the Incident', escapeHtml(record.issue) || 'N/A'],
+    ['What immediate actions were taken?', escapeHtml(record.immediate_actions) || 'N/A'],
     ['Reported Date', fmtDate(record.created_at)],
     ['Pending Since', `${pendingSince} day${pendingSince === 1 ? '' : 's'}`],
-    ['Expected Closure Date', fmtDate(record.closure_date)],
-    ['Resolved', `<span style="${statusPillStyle(statusColor)}">${escapeHtml(resolved)}</span>`]
+    ['If NOT RESOLVED, please specify the closure date.', fmtDate(record.closure_date)],
+    ['Has the issue been resolved?', resolved === 'Yes' ? badgePill('RESOLVED', BRAND.blueDeep) : badgePill('NOT RESOLVED', BRAND.red)]
   ];
 
-  const tableRows = rows.map(([label, value]) => `
-    <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #e8eaed;color:#5f6368;font-weight:600;width:38%;background:#fafafa;">${label}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #e8eaed;color:#202124;">${value}</td>
-    </tr>`).join('');
-
-  const timestamp = new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-
   return `
-<div style="margin:0;padding:0;background-color:#f1f3f4;font-family:Roboto,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f3f4;padding:24px 0;">
+<div style="margin:0;padding:0;background-color:#f4f6fa;font-family:${BRAND.bodyFont};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa;padding:24px 0;">
     <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
-        <tr><td style="background:${record.critical ? criticalColor : '#1a73e8'};padding:20px 24px;">
-          <span style="color:#ffffff;font-size:20px;font-weight:700;">Exigency Management System</span><br/>
-          <span style="color:#e8f0fe;font-size:13px;">${escapeHtml(record.school_code)} &middot; ${escapeHtml(record.department)}</span>
-        </td></tr>
-        <tr><td style="padding:20px 24px 4px 24px;">
-          <p style="margin:0 0 12px 0;font-size:15px;color:#202124;">
+      <table role="presentation" width="100%" style="max-width:620px;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
+        ${brandMasthead('Action Required', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`, appUrl)}
+        <tr><td style="padding:16px 26px 4px;">
+          <p style="margin:0 0 8px 0;font-family:${BRAND.bodyFont};font-size:14.5px;color:${BRAND.ink};">
             The exigency below is <strong>unresolved</strong> and requires your action.
           </p>
         </td></tr>
-        <tr><td style="padding:0 24px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
-            ${tableRows}
+        <tr><td style="padding:0 12px 8px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            ${brandFieldTable(rows)}
           </table>
         </td></tr>
-        <tr><td style="padding:24px;">
-          <a href="${appUrl}" style="display:inline-block;background:#1a73e8;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:4px;font-size:14px;font-weight:600;">
+        <tr><td style="padding:20px 26px 24px;">
+          <a href="${appUrl}" style="display:inline-block;background:${BRAND.red};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:6px;font-family:${BRAND.headFont};font-size:13.5px;font-weight:700;">
             Open Dashboard
           </a>
         </td></tr>
-        <tr><td style="background:#f8f9fa;padding:14px 24px;border-top:1px solid #e8eaed;">
-          <p style="margin:0;font-size:11px;color:#5f6368;">
-            Automated reminder generated by the Exigency Management System &middot; ${timestamp}
-          </p>
-        </td></tr>
+        ${brandFooter()}
       </table>
     </td></tr>
   </table>
@@ -175,7 +227,7 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `[Exigency Reminder] ${record.id} - ${record.school_code} - Action Required`,
+      subject: `Reminder: Exigency - ${record.school_raw || record.school_code} - ${record.department}`,
       html: buildHtmlEmail(record, appUrl)
     });
     writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'SUCCESS', message: 'Reminder email sent.' + overrideNote });
@@ -192,79 +244,33 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
  * #F2C418 yellow accent) and the guideline's own 45/45/10 colour-proportion
  * chart, rendered as a bar under the header.
  * @param {Object} record
+ * @param {string} appUrl
  * @return {string}
  */
-function buildSubmissionTableHtml(record) {
-  const fields = [
-    ['Form Number', record.id],
-    ['Timestamp', fmtDate(record.created_at)],
-    ['Form Filled by', record.submitter_email],
-    ['School Selection', record.school_raw || record.school_code],
-    ['Date of the Incident', fmtDate(record.date_of_incident)],
-    ['Location', record.location],
-    ['Department', record.department],
-    ['Is this a Critical Issue?', record.critical ? 'Yes' : 'No'],
-    ['Describe the Incident', record.issue],
-    ['Photos/videos/documents', record.attachments],
-    ['What immediate actions were taken?', record.immediate_actions]
-  ];
-
+function buildSubmissionTableHtml(record, appUrl) {
   const resolved = record.resolved || 'No';
-  const resolvedBadge = resolved === 'Yes'
-    ? `<span style="display:inline-block;padding:2px 10px;border-radius:100px;background:#227eb8;color:#ffffff;font-size:11.5px;font-weight:700;">RESOLVED</span>`
-    : `<span style="display:inline-block;padding:2px 10px;border-radius:100px;background:#B8292F;color:#ffffff;font-size:11.5px;font-weight:700;">NOT RESOLVED</span>`;
-
-  const trailingFields = [
+  const rows = [
+    ['Form Number', escapeHtml(record.id)],
+    ['Timestamp', fmtDate(record.created_at)],
+    ['Form Filled by', escapeHtml(record.submitter_email)],
+    ['School Selection', escapeHtml(record.school_raw || record.school_code)],
+    ['Date of the Incident', fmtDate(record.date_of_incident)],
+    ['Location', escapeHtml(record.location) || 'N/A'],
+    ['Department', escapeHtml(record.department)],
+    ['Is this a Critical Issue?', record.critical ? badgePill('CRITICAL', BRAND.red) : 'No'],
+    ['Describe the Incident', escapeHtml(record.issue) || 'N/A'],
+    ['Photos/videos/documents', escapeHtml(record.attachments) || 'N/A'],
+    ['What immediate actions were taken?', escapeHtml(record.immediate_actions) || 'N/A'],
+    ['Has the issue been resolved?', resolved === 'Yes' ? badgePill('RESOLVED', BRAND.blueDeep) : badgePill('NOT RESOLVED', BRAND.red)],
     ['If NOT RESOLVED, please specify the closure date.', fmtDate(record.closure_date)],
-    ['Any suggested Policy, Training, Infra, Services or Process change required?', record.suggested_changes]
+    ['Any suggested Policy, Training, Infra, Services or Process change required?', escapeHtml(record.suggested_changes) || 'N/A']
   ];
-
-  const rowStyle = (i) => i % 2 === 0 ? '' : 'background:#fafbfd;';
-  const labelStyle = 'padding:9px 14px;font-size:13.5px;font-weight:700;width:42%;color:#005BAA;vertical-align:top;';
-  const valueStyle = 'padding:9px 14px;font-size:13.5px;vertical-align:top;color:#202124;';
-
-  const fieldRows = fields.map(([label, value], i) => `
-    <tr style="${rowStyle(i)}">
-      <td style="${labelStyle}">${escapeHtml(label)}</td>
-      <td style="${valueStyle}">${escapeHtml(value) || 'N/A'}</td>
-    </tr>`).join('');
-
-  const resolvedRow = `
-    <tr style="${rowStyle(fields.length)}">
-      <td style="${labelStyle}">Has the issue been resolved?</td>
-      <td style="${valueStyle}">${resolvedBadge}</td>
-    </tr>`;
-
-  const trailingRows = trailingFields.map(([label, value], i) => `
-    <tr style="${rowStyle(fields.length + 1 + i)}">
-      <td style="${labelStyle}">${escapeHtml(label)}</td>
-      <td style="${valueStyle}">${escapeHtml(value) || 'N/A'}</td>
-    </tr>`).join('');
 
   return `
-<table cellspacing="0" cellpadding="0" width="100%" style="max-width:620px;border-collapse:collapse;background:#ffffff;border-radius:10px;overflow:hidden;font-family:Arial,'Segoe UI',sans-serif;">
-  <tr>
-    <td style="padding:20px 20px 6px;background:#ffffff;">
-      <table cellspacing="0" cellpadding="0"><tr>
-        <td style="width:16px;height:16px;border-radius:50%;background:#005BAA;position:relative;">&nbsp;</td>
-        <td style="padding-left:8px;font-weight:800;letter-spacing:0.03em;color:#1a2230;font-size:13px;text-transform:uppercase;">Fountainhead &middot; Exigency Management</td>
-      </tr></table>
-      <div style="font-size:19px;font-weight:800;color:#1a2230;margin-top:10px;">${escapeHtml(record.id)}</div>
-      <div style="font-size:13px;color:#5b6472;margin-top:2px;">${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}</div>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:12px 20px 16px;">
-      <table cellspacing="0" cellpadding="0" width="100%"><tr>
-        <td width="45%" style="height:6px;background:#005BAA;font-size:0;line-height:0;">&nbsp;</td>
-        <td width="45%" style="height:6px;background:#B8292F;font-size:0;line-height:0;">&nbsp;</td>
-        <td width="10%" style="height:6px;background:#F2C418;font-size:0;line-height:0;">&nbsp;</td>
-      </tr></table>
-    </td>
-  </tr>
-  ${fieldRows}
-  ${resolvedRow}
-  ${trailingRows}
+<table cellspacing="0" cellpadding="0" width="100%" style="max-width:620px;border-collapse:collapse;background:#ffffff;border-radius:10px;overflow:hidden;">
+  ${brandMasthead('New Exigency Reported', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`, appUrl)}
+  ${brandFieldTable(rows)}
+  ${brandFooter()}
 </table>`;
 }
 
@@ -296,7 +302,7 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
   const html = `
     <div style="background:#f4f6fa;padding:24px 0;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-        ${buildSubmissionTableHtml(record)}
+        ${buildSubmissionTableHtml(record, appUrl)}
       </td></tr></table>
     </div>`;
 

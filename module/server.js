@@ -27,6 +27,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/webhook', require('./src/routes/webhook'));
+app.use('/api/report', require('./src/routes/report'));
 app.use('/api/exigencies', require('./src/routes/exigencies'));
 app.use('/api/schools', require('./src/routes/schools'));
 app.use('/api/settings', require('./src/routes/settings'));

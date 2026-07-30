@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Report an Exigency — Fountainhead</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/css/report.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <img src="/images/fountainhead-logo.png" alt="Fountainhead" class="masthead-logo" />
+      <h1>Report an Exigency</h1>
+      <p class="subtitle">Use this form to report an incident to the concerned department. It replaces the old Google Form — submissions go straight into the Exigency Management System.</p>
+      <div class="proportion-bar"><span class="blue"></span><span class="red"></span><span class="yellow"></span></div>
+    </header>
+
+    <form id="reportForm" class="report-card">
+      <div class="field">
+        <label for="submitterEmail">Your Email <span class="req">*</span></label>
+        <input type="email" id="submitterEmail" name="submitterEmail" required placeholder="you@fountainheadschools.org" />
+      </div>
+
+      <div class="field">
+        <label for="school">School Selection <span class="req">*</span></label>
+        <select id="school" name="school" required>
+          <option value="" disabled selected hidden>Select school&hellip;</option>
+        </select>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="dateOfIncident">Date of the Incident <span class="req">*</span></label>
+          <input type="date" id="dateOfIncident" name="dateOfIncident" required />
+        </div>
+        <div class="field">
+          <label for="location">Location</label>
+          <input type="text" id="location" name="location" placeholder="e.g. floor, bus, kitchen" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="department">Department <span class="req">*</span></label>
+          <select id="department" name="department" required>
+            <option value="" disabled selected hidden>Select department&hellip;</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="critical">Is this a Critical Issue? <span class="req">*</span></label>
+          <select id="critical" name="critical" required>
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="issue">Describe the Incident <span class="req">*</span></label>
+        <textarea id="issue" name="issue" rows="4" required></textarea>
+      </div>
+
+      <div class="field">
+        <label for="attachments">Photos/videos/documents</label>
+        <input type="text" id="attachments" name="attachments" placeholder="Paste a Google Drive / shared link (optional)" />
+      </div>
+
+      <div class="field">
+        <label for="immediateActions">What immediate actions were taken?</label>
+        <textarea id="immediateActions" name="immediateActions" rows="3"></textarea>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="resolved">Has the issue been resolved? <span class="req">*</span></label>
+          <select id="resolved" name="resolved" required>
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+        <div class="field" id="closureDateField">
+          <label for="closureDate">If NOT RESOLVED, closure date</label>
+          <input type="date" id="closureDate" name="closureDate" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="suggestedChanges">Any suggested Policy, Training, Infra, Services or Process change required?</label>
+        <textarea id="suggestedChanges" name="suggestedChanges" rows="3"></textarea>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn-submit">Submit Report</button>
+      <div id="formMessage" class="form-message" role="status"></div>
+    </form>
+  </div>
+
+  <script src="/js/report.js"></script>
+</body>
+</html>

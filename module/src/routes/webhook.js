@@ -1,43 +1,17 @@
 /**
  * webhook.js
  *
- * Receives Google Form submissions forwarded by the Apps Script webhook
- * (see ../../AppsScriptWebhook.gs). This replaces onFormSubmit + the master
- * sheet entirely — this endpoint IS the new "master database" entry point.
- *
- * Expected payload fields (mapped 1:1 from the real Form questions):
- *   timestamp, submitterEmail, school, dateOfIncident, location, department,
- *   critical ("Yes"/"No"), issue, attachments, immediateActions,
- *   resolved ("Yes"/"No"), closureDate, suggestedChanges
+ * Legacy intake path for Google Form submissions forwarded by the Apps
+ * Script webhook (see ../../AppsScriptWebhook.gs / ExigencyModuleWebhook.gs).
+ * Kept for backward compatibility, but the module's own built-in form
+ * (see routes/report.js, served at /report.html) is now the primary path —
+ * it needs no Google Form, Apps Script trigger, or tunnel at all.
  */
 
 const express = require('express');
-const db = require('../db');
-const { createUniqueId } = require('../services/idService');
-const { writeLog } = require('../services/logService');
-const { resolveSchoolCode, resolveDepartment, isKnownSchool, getSetting, getDepartmentRecipients } = require('../services/settingsService');
-const { sendNewSubmissionEmail } = require('../services/emailService');
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
-}
+const { processSubmission } = require('../services/submissionService');
 
 const router = express.Router();
-
-function isAuthorizedSubmitter(email) {
-  if (!email) return false;
-  const value = String(email).trim().toLowerCase();
-
-  const fsGroupEmails = String(getSetting('FsGroupEmail', '') || '')
-    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  if (fsGroupEmails.includes(value)) return true;
-
-  // Supports one or more comma-separated domains, e.g.
-  // "fountainheadschools.org,protego.services" — any match authorizes.
-  const orgDomains = String(getSetting('OrgDomain', '') || '')
-    .split(',').map((s) => s.trim().toLowerCase().replace(/^@/, '')).filter(Boolean);
-  return orgDomains.some((domain) => value.endsWith('@' + domain));
-}
 
 router.post('/form-submit', async (req, res) => {
   const providedSecret = req.header('X-Webhook-Secret');
@@ -45,59 +19,9 @@ router.post('/form-submit', async (req, res) => {
     return res.status(401).json({ error: 'Invalid or missing webhook secret.' });
   }
 
-  const body = req.body || {};
-  const submitterEmail = body.submitterEmail || '';
-  const schoolRaw = body.school || '';
-  const issue = body.issue || '';
-
-  if (!isAuthorizedSubmitter(submitterEmail)) {
-    writeLog({ recipient: submitterEmail, type: 'SYNC', status: 'FAILURE', message: 'Unauthorized submitter: ' + submitterEmail });
-    return res.status(200).json({ accepted: false, reason: 'Unauthorized submitter (not in FS Group / org domain).' });
-  }
-
-  if (!schoolRaw || !issue) {
-    writeLog({ recipient: submitterEmail, type: 'SYNC', status: 'FAILURE', message: 'Row validation failed: missing School or Issue description.' });
-    return res.status(200).json({ accepted: false, reason: 'Missing required fields (School Selection / Describe the Incident).' });
-  }
-
-  const schoolCode = resolveSchoolCode(schoolRaw);
-  const department = resolveDepartment(body.department || 'Other');
-  const createdAt = body.timestamp || new Date().toISOString();
-  const id = createUniqueId(schoolCode, new Date(createdAt));
-  const critical = /^y/i.test(body.critical || '') ? 1 : 0;
-  const resolved = /^y/i.test(body.resolved || '') ? 'Yes' : 'No';
-
-  db.prepare(`
-    INSERT INTO exigencies
-      (id, school_code, school_raw, department, critical, location, date_of_incident,
-       issue, attachments, immediate_actions, resolved, closure_date, resolved_date,
-       suggested_changes, submitter_email, created_at, sync_status, raw_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id, schoolCode, schoolRaw, department, critical, body.location || '', body.dateOfIncident || null,
-    issue, body.attachments || '', body.immediateActions || '', resolved, body.closureDate || null,
-    resolved === 'Yes' ? createdAt : null, body.suggestedChanges || '', submitterEmail, createdAt,
-    isKnownSchool(schoolCode) ? 'Synced' : 'Unmapped school',
-    JSON.stringify(body)
-  );
-
-  writeLog({ recordId: id, recipient: submitterEmail, type: 'SYNC', status: 'SUCCESS', message: 'New submission stored via webhook.' });
-
-  // Notify the department's recipients immediately, in the field/value HTML
-  // table format (see EmailService.buildSubmissionTableHtml). Failure to
-  // send must never fail the webhook response — the record is already saved.
-  try {
-    const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(id);
-    const recipients = getDepartmentRecipients(schoolCode, department);
-    const to = recipients.to.filter(isValidEmail);
-    const cc = recipients.cc.filter(isValidEmail);
-    const appUrl = `${req.protocol}://${req.get('host')}`;
-    await sendNewSubmissionEmail(record, to, cc, appUrl);
-  } catch (mailError) {
-    writeLog({ recordId: id, type: 'NEW_SUBMISSION', status: 'FAILURE', message: 'Notification send threw: ' + mailError.message });
-  }
-
-  res.json({ accepted: true, id });
+  const appUrl = `${req.protocol}://${req.get('host')}`;
+  const result = await processSubmission(req.body || {}, appUrl);
+  res.json(result);
 });
 
 module.exports = router;

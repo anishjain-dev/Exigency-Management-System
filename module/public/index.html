@@ -10,12 +10,10 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">EX</div>
-        <div class="brand-text">
-          <div class="brand-title">Exigency</div>
-          <div class="brand-subtitle">Management System</div>
-        </div>
+        <img src="/images/fountainhead-logo.png" alt="Fountainhead" class="brand-logo" />
       </div>
+      <div class="brand-subtitle-row">Exigency Management</div>
+      <div class="brand-proportion-bar"><span></span><span></span><span></span></div>
 
       <nav class="side-nav">
         <button class="tab-btn active" data-tab="dashboard">
@@ -40,6 +38,11 @@
         </button>
       </nav>
 
+      <a href="/report.html" target="_blank" class="tab-btn" style="margin-bottom:6px;">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+        Report an Exigency
+      </a>
+
       <div class="sidebar-footer">
         <span class="live-dot"></span> Running on localhost:4000
       </div>
@@ -57,6 +60,14 @@
       <main>
         <section id="tab-dashboard" class="tab-panel active">
           <div class="kpi-grid" id="kpiGrid"></div>
+
+          <div class="table-card" style="margin-bottom:16px;">
+            <table class="data-table" id="recentExigenciesTable">
+              <thead><tr><th>Form No.</th><th>School</th><th>Department</th><th>Status</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <div class="empty-state" id="recentExigenciesEmpty" hidden>No exigencies yet.</div>
+          </div>
 
           <div class="panel-grid">
             <div class="panel">

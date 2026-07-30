@@ -45,9 +45,9 @@ function fmtDate(iso) {
 
 const KPI_DEFS = [
   { key: 'total', label: 'Total' },
-  { key: 'unresolved', label: 'Unresolved', accent: 'accent-warning' },
+  { key: 'unresolved', label: 'Unresolved', accent: 'accent-critical' },
   { key: 'resolved', label: 'Resolved', accent: 'accent-success' },
-  { key: 'critical', label: 'Critical', accent: 'accent-critical' },
+  { key: 'critical', label: 'Critical', accent: 'accent-warning' },
   { key: 'dueToday', label: 'Due Today', accent: 'accent-warning' },
   { key: 'overdue', label: 'Overdue', accent: 'accent-critical' }
 ];
@@ -64,6 +64,25 @@ async function loadDashboard() {
 
   renderBarList('schoolBars', schoolCounts, 'school');
   renderBarList('departmentBars', departmentCounts, 'department');
+  await loadRecentExigencies();
+}
+
+async function loadRecentExigencies() {
+  const rows = (await api('/exigencies')).slice(0, 8);
+  const tbody = document.querySelector('#recentExigenciesTable tbody');
+  const emptyState = document.getElementById('recentExigenciesEmpty');
+
+  emptyState.hidden = rows.length !== 0;
+  tbody.innerHTML = rows.map((r) => `
+    <tr>
+      <td>${r.id}</td>
+      <td>${r.school_code}</td>
+      <td>${r.department || ''}</td>
+      <td>${r.resolved === 'Yes'
+        ? '<span class="status-pill pill-resolved">RESOLVED</span>'
+        : '<span class="status-pill pill-not-resolved">NOT RESOLVED</span>'}</td>
+    </tr>
+  `).join('');
 }
 
 /**
