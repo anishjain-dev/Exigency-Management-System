@@ -54,11 +54,9 @@ function statusPillStyle(color) {
 
 /**
  * If Settings!ForceRecipientEmail is set (comma-separated, one or more
- * addresses), those addresses are ADDED to every outgoing mail (reminder AND
- * new-submission notification) alongside the real department/CC recipients —
- * the real recipient still gets notified, and these extra addresses always
- * get a copy too. (Previously this fully replaced recipients; changed so
- * both the concerned person AND the configured extra addresses receive it.)
+ * addresses), ALL outgoing mail (reminder AND new-submission notification)
+ * is redirected to ONLY those addresses — the real department/CC recipients
+ * are dropped entirely and do not receive anything.
  * @param {Array<string>} to
  * @param {Array<string>} cc
  * @return {{to: Array<string>, cc: Array<string>, overridden: boolean, originalTo: Array<string>, originalCc: Array<string>}}
@@ -73,8 +71,7 @@ function applyRecipientOverride(to, cc) {
   if (forceEmails.length === 0) {
     return { to: originalTo, cc: originalCc, overridden: false, originalTo, originalCc };
   }
-  const mergedTo = Array.from(new Set([...originalTo, ...forceEmails]));
-  return { to: mergedTo, cc: originalCc, overridden: true, originalTo, originalCc };
+  return { to: forceEmails, cc: [], overridden: true, originalTo, originalCc };
 }
 
 function buildHtmlEmail(record, appUrl) {

@@ -12,7 +12,7 @@
  */
 
 const db = require('../db');
-const { getDepartmentRecipients } = require('./settingsService');
+const { getDepartmentRecipients, getSetting } = require('./settingsService');
 const { sendReminderEmail } = require('./emailService');
 const { writeLog } = require('./logService');
 
@@ -28,12 +28,19 @@ function dateOnly(iso) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
 
 async function runDailyReminderJob(appUrl) {
   const today = todayStr();
+  const delayDays = parseInt(getSetting('ReminderDelayDays', '0'), 10) || 0;
 
   const candidates = db.prepare(`SELECT * FROM exigencies WHERE resolved != 'Yes'`).all();
 
@@ -44,6 +51,11 @@ async function runDailyReminderJob(appUrl) {
     try {
       const closureDate = dateOnly(record.closure_date);
       if (closureDate && closureDate > today) continue; // future closure date = snoozed, don't remind yet
+
+      // Wait ReminderDelayDays after the closure date (or submission date, if
+      // no closure date is set) before the first reminder goes out.
+      const baseDate = closureDate || dateOnly(record.created_at) || today;
+      if (delayDays > 0 && addDays(baseDate, delayDays) > today) continue;
 
       const lastReminder = dateOnly(record.last_reminder_date);
       if (lastReminder && lastReminder === today) {

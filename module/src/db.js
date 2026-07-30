@@ -107,6 +107,9 @@ function seedDefaults() {
     ResolvedValue: 'Yes',
     ReminderTriggerHour: '8',
     DashboardTriggerHour: '9',
+    // Days to wait after the closure date (or submission date, if no closure
+    // date) before a reminder email goes out. Set manually in the Settings tab.
+    ReminderDelayDays: '0',
     CriticalColor: '#EA4335',
     ResolvedColor: '#34A853',
     UnresolvedColor: '#FBBC04'

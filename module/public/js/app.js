@@ -94,6 +94,9 @@ function renderBarList(containerId, rows, labelKey) {
 
 document.getElementById('runReminderBtn').addEventListener('click', async () => {
   const el = document.getElementById('reminderResult');
+  if (!confirm('This will send real reminder emails to recipients now. Continue?')) {
+    return;
+  }
   el.textContent = 'Running...';
   try {
     const result = await api('/reminders/run-now', { method: 'POST' });
@@ -224,7 +227,7 @@ document.getElementById('addDeptForm').addEventListener('submit', async (e) => {
 
 const SETTINGS_FIELDS = [
   'MailingEnabled', 'AdminEmail', 'DefaultCC', 'OrgDomain', 'FsGroupEmail', 'ForceRecipientEmail',
-  'ReminderTriggerHour', 'DashboardTriggerHour'
+  'ReminderTriggerHour', 'DashboardTriggerHour', 'ReminderDelayDays'
 ];
 
 async function loadSettings() {
