@@ -12,7 +12,7 @@
     <nav>
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="exigencies">Exigencies</button>
-      <button class="tab-btn" data-tab="schools">Schools</button>
+      <button class="tab-btn" data-tab="schools">Schools &amp; Recipients</button>
       <button class="tab-btn" data-tab="settings">Settings</button>
       <button class="tab-btn" data-tab="logs">Logs</button>
     </nav>
@@ -23,7 +23,12 @@
       <div class="kpi-grid" id="kpiGrid"></div>
       <h2>School-wise Counts</h2>
       <table class="data-table" id="schoolCountsTable">
-        <thead><tr><th>School</th><th>Total</th><th>Open</th><th>Closed</th></tr></thead>
+        <thead><tr><th>School</th><th>Total</th><th>Unresolved</th><th>Resolved</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <h2>Department-wise Counts</h2>
+      <table class="data-table" id="departmentCountsTable">
+        <thead><tr><th>Department</th><th>Total</th><th>Unresolved</th><th>Resolved</th></tr></thead>
         <tbody></tbody>
       </table>
       <button id="runReminderBtn" class="btn-primary">Run Daily Reminder Job Now</button>
@@ -33,17 +38,19 @@
     <section id="tab-exigencies" class="tab-panel">
       <div class="toolbar">
         <select id="filterSchool"><option value="">All Schools</option></select>
-        <select id="filterStatus">
-          <option value="">All Statuses</option>
-          <option>Open</option><option>In Progress</option><option>Snoozed</option><option>Closed</option>
+        <select id="filterDepartment"><option value="">All Departments</option></select>
+        <select id="filterResolved">
+          <option value="">All</option>
+          <option value="No">Unresolved</option>
+          <option value="Yes">Resolved</option>
         </select>
         <button id="refreshExigenciesBtn">Refresh</button>
       </div>
       <table class="data-table" id="exigenciesTable">
         <thead>
           <tr>
-            <th>ID</th><th>School</th><th>Issue</th><th>Owner</th><th>Follow-up</th>
-            <th>Status</th><th>Next Due</th><th>Closed</th><th></th>
+            <th>ID</th><th>School</th><th>Department</th><th>Critical</th><th>Issue</th>
+            <th>Location</th><th>Immediate Actions</th><th>Resolved</th><th>Closure Date</th><th></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -54,9 +61,16 @@
       <h2>Schools</h2>
       <form id="addSchoolForm" class="inline-form">
         <input id="newSchoolCode" placeholder="Code (e.g. FSK)" required />
-        <input id="newSchoolName" placeholder="Full name (e.g. Fountainhead School Kukatpally)" required />
+        <input id="newSchoolName" placeholder="Full name / label matching Form dropdown" />
         <button type="submit">Add School</button>
       </form>
+
+      <h2>Add / Rename Department</h2>
+      <form id="addDeptForm" class="inline-form">
+        <input id="newDeptName" placeholder="Department name (must match Form dropdown)" required />
+        <button type="submit">Add Department</button>
+      </form>
+
       <div id="schoolsList"></div>
     </section>
 

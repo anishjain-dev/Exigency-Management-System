@@ -5,10 +5,6 @@
  * Express API only (relative /api/... paths).
  */
 
-const STATUS_COLORS = {
-  Open: '#FBBC04', 'In Progress': '#4285F4', Snoozed: '#A142F4', Closed: '#34A853'
-};
-
 document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
@@ -39,17 +35,21 @@ function fmtDate(iso) {
 }
 
 async function loadDashboard() {
-  const { kpis, schoolCounts } = await api('/dashboard');
+  const { kpis, schoolCounts, departmentCounts } = await api('/dashboard');
   const grid = document.getElementById('kpiGrid');
   grid.innerHTML = [
-    ['Total', kpis.total], ['Open', kpis.open], ['Closed', kpis.closed],
-    ['Pending', kpis.pending], ["Today's Follow-ups", kpis.todayFollowups], ['Overdue', kpis.overdue]
+    ['Total', kpis.total], ['Unresolved', kpis.unresolved], ['Resolved', kpis.resolved],
+    ['Critical', kpis.critical], ["Due Today", kpis.dueToday], ['Overdue', kpis.overdue]
   ].map(([label, value]) => `
     <div class="kpi-card"><div class="value">${value}</div><div class="label">${label}</div></div>
   `).join('');
 
   document.querySelector('#schoolCountsTable tbody').innerHTML = schoolCounts.map((s) => `
-    <tr><td>${s.school}</td><td>${s.total}</td><td>${s.open}</td><td>${s.closed}</td></tr>
+    <tr><td>${s.school}</td><td>${s.total}</td><td>${s.unresolved}</td><td>${s.resolved}</td></tr>
+  `).join('');
+
+  document.querySelector('#departmentCountsTable tbody').innerHTML = departmentCounts.map((d) => `
+    <tr><td>${d.department}</td><td>${d.total}</td><td>${d.unresolved}</td><td>${d.resolved}</td></tr>
   `).join('');
 }
 
@@ -67,26 +67,30 @@ document.getElementById('runReminderBtn').addEventListener('click', async () => 
 
 async function loadExigencies() {
   const school = document.getElementById('filterSchool').value;
-  const status = document.getElementById('filterStatus').value;
+  const department = document.getElementById('filterDepartment').value;
+  const resolved = document.getElementById('filterResolved').value;
   const params = new URLSearchParams();
   if (school) params.set('school', school);
-  if (status) params.set('status', status);
+  if (department) params.set('department', department);
+  if (resolved) params.set('resolved', resolved);
 
   const rows = await api('/exigencies?' + params.toString());
   document.querySelector('#exigenciesTable tbody').innerHTML = rows.map((r) => `
     <tr data-id="${r.id}">
       <td>${r.id}</td>
       <td>${r.school_code}</td>
-      <td>${(r.issue || '').slice(0, 40)}</td>
-      <td><input class="edit-owner" value="${r.owner || ''}" /></td>
-      <td><input class="edit-followup" type="date" value="${r.followup_date ? r.followup_date.slice(0,10) : ''}" /></td>
+      <td>${r.department || ''}</td>
+      <td>${r.critical ? '<span class="status-pill" style="background:#EA4335;">CRITICAL</span>' : 'No'}</td>
+      <td title="${(r.issue || '').replace(/"/g, '&quot;')}">${(r.issue || '').slice(0, 40)}</td>
+      <td>${r.location || ''}</td>
+      <td><input class="edit-actions" value="${(r.immediate_actions || '').replace(/"/g, '&quot;')}" /></td>
       <td>
-        <select class="edit-status">
-          ${['Open','In Progress','Snoozed','Closed'].map((s) => `<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
+        <select class="edit-resolved">
+          <option value="No" ${r.resolved !== 'Yes' ? 'selected' : ''}>No</option>
+          <option value="Yes" ${r.resolved === 'Yes' ? 'selected' : ''}>Yes</option>
         </select>
       </td>
-      <td><input class="edit-nextdue" type="date" value="${r.next_due_date ? r.next_due_date.slice(0,10) : ''}" /></td>
-      <td>${fmtDate(r.closed_date)}</td>
+      <td><input class="edit-closure" type="date" value="${r.closure_date ? r.closure_date.slice(0,10) : ''}" /></td>
       <td><button class="save-row-btn">Save</button></td>
     </tr>
   `).join('');
@@ -96,10 +100,9 @@ async function loadExigencies() {
       const tr = e.target.closest('tr');
       const id = tr.dataset.id;
       const payload = {
-        owner: tr.querySelector('.edit-owner').value,
-        followup_date: tr.querySelector('.edit-followup').value || null,
-        status: tr.querySelector('.edit-status').value,
-        next_due_date: tr.querySelector('.edit-nextdue').value || null
+        immediate_actions: tr.querySelector('.edit-actions').value,
+        resolved: tr.querySelector('.edit-resolved').value,
+        closure_date: tr.querySelector('.edit-closure').value || null
       };
       await api(`/exigencies/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
       loadExigencies();
@@ -109,51 +112,52 @@ async function loadExigencies() {
 
 document.getElementById('refreshExigenciesBtn').addEventListener('click', loadExigencies);
 document.getElementById('filterSchool').addEventListener('change', loadExigencies);
-document.getElementById('filterStatus').addEventListener('change', loadExigencies);
+document.getElementById('filterDepartment').addEventListener('change', loadExigencies);
+document.getElementById('filterResolved').addEventListener('change', loadExigencies);
 
 async function loadSchools() {
   const schools = await api('/schools');
+  const departments = await api('/schools/departments');
 
-  const filterSelect = document.getElementById('filterSchool');
-  filterSelect.innerHTML = '<option value="">All Schools</option>' +
-    schools.map((s) => `<option value="${s.code}">${s.code} - ${s.name}</option>`).join('');
+  const filterSchoolSelect = document.getElementById('filterSchool');
+  filterSchoolSelect.innerHTML = '<option value="">All Schools</option>' +
+    schools.map((s) => `<option value="${s.code}">${s.code}${s.name && s.name !== s.code ? ' - ' + s.name : ''}</option>`).join('');
+
+  const filterDeptSelect = document.getElementById('filterDepartment');
+  filterDeptSelect.innerHTML = '<option value="">All Departments</option>' +
+    departments.map((d) => `<option value="${d}">${d}</option>`).join('');
 
   document.getElementById('schoolsList').innerHTML = schools.map((s) => `
     <div class="school-card">
-      <h3>${s.code} — ${s.name}</h3>
+      <h3>${s.code}${s.name && s.name !== s.code ? ' — ' + s.name : ''}</h3>
       <table class="data-table">
-        <thead><tr><th>Email</th><th>Role</th><th>Active</th><th></th></tr></thead>
+        <thead><tr><th>Department</th><th>To</th><th>CC</th><th></th></tr></thead>
         <tbody>
-          ${s.users.map((u) => `
-            <tr>
-              <td>${u.email}</td><td>${u.role}</td><td>${u.active ? 'Yes' : 'No'}</td>
-              <td><button class="remove-user-btn" data-id="${u.id}">Remove</button></td>
-            </tr>`).join('')}
+          ${departments.map((dept) => {
+            const existing = (s.departments || []).find((d) => d.department === dept) || { to_emails: '', cc_emails: '' };
+            return `
+              <tr data-school="${s.code}" data-dept="${dept}">
+                <td>${dept}</td>
+                <td><input class="recipient-to" value="${existing.to_emails || ''}" placeholder="comma-separated emails" /></td>
+                <td><input class="recipient-cc" value="${existing.cc_emails || ''}" placeholder="comma-separated emails" /></td>
+                <td><button class="save-recipients-btn">Save</button></td>
+              </tr>`;
+          }).join('')}
         </tbody>
       </table>
-      <form class="inline-form add-user-form" data-code="${s.code}">
-        <input type="email" placeholder="user@example.org" required class="user-email" />
-        <input placeholder="Role (optional)" class="user-role" />
-        <button type="submit">Add User</button>
-      </form>
     </div>
   `).join('');
 
-  document.querySelectorAll('.remove-user-btn').forEach((btn) => {
+  document.querySelectorAll('.save-recipients-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
-      await api(`/schools/users/${e.target.dataset.id}`, { method: 'DELETE' });
-      loadSchools();
-    });
-  });
-
-  document.querySelectorAll('.add-user-form').forEach((form) => {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const code = form.dataset.code;
-      const email = form.querySelector('.user-email').value;
-      const role = form.querySelector('.user-role').value;
-      await api(`/schools/${code}/users`, { method: 'POST', body: JSON.stringify({ email, role, active: true }) });
-      loadSchools();
+      const tr = e.target.closest('tr');
+      const to = tr.querySelector('.recipient-to').value;
+      const cc = tr.querySelector('.recipient-cc').value;
+      await api(`/schools/${encodeURIComponent(tr.dataset.school)}/departments/${encodeURIComponent(tr.dataset.dept)}`, {
+        method: 'PUT', body: JSON.stringify({ to, cc })
+      });
+      btn.textContent = 'Saved!';
+      setTimeout(() => { btn.textContent = 'Save'; }, 1500);
     });
   });
 }
@@ -167,9 +171,16 @@ document.getElementById('addSchoolForm').addEventListener('submit', async (e) =>
   loadSchools();
 });
 
+document.getElementById('addDeptForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('newDeptName').value;
+  await api('/schools/departments', { method: 'POST', body: JSON.stringify({ name }) });
+  document.getElementById('addDeptForm').reset();
+  loadSchools();
+});
+
 const SETTINGS_FIELDS = [
-  'AdminEmail', 'DefaultCC', 'OrgDomain', 'FsGroupEmail',
-  'StatusList', 'ClosedStatus', 'ReminderTriggerHour', 'DashboardTriggerHour'
+  'AdminEmail', 'DefaultCC', 'OrgDomain', 'FsGroupEmail', 'ReminderTriggerHour', 'DashboardTriggerHour'
 ];
 
 async function loadSettings() {

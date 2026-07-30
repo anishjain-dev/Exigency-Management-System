@@ -4,6 +4,19 @@
  * SQLite database setup (file-based, no separate DB server needed).
  * Replaces the Google Sheets master/school/settings/logs sheets entirely —
  * this is now the single source of truth for the whole system.
+ *
+ * Schema matches the REAL Exigency Reporting Form fields (from the actual
+ * response export), not a generic guess:
+ *   Timestamp, Email Address, School Selection, Date of the Incident,
+ *   Location, Choose the Department, Is this a Critical Issue?,
+ *   Describe the Incident, Upload photos/videos/documents,
+ *   What immediate actions were taken?, Has the issue been resolved?,
+ *   If NOT RESOLVED please specify the closure date.,
+ *   Any suggested Policy/Training/Infra/Services/Process change required?
+ *
+ * Recipients are routed by (School, Department) — matching the original
+ * "<CODE> Emails" sheets' Department -> To/CC mapping — not by a single
+ * generic "Owner" field.
  */
 
 const path = require('path');
@@ -23,27 +36,37 @@ db.exec(`
     name TEXT NOT NULL
   );
 
-  CREATE TABLE IF NOT EXISTS school_users (
+  CREATE TABLE IF NOT EXISTS departments (
+    name TEXT PRIMARY KEY
+  );
+
+  -- Replaces the "<CODE> Emails" sheets: one row per (school, department).
+  CREATE TABLE IF NOT EXISTS department_recipients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     school_code TEXT NOT NULL,
-    email TEXT NOT NULL,
-    role TEXT DEFAULT 'Coordinator',
-    active INTEGER DEFAULT 1,
-    FOREIGN KEY (school_code) REFERENCES schools(code)
+    department TEXT NOT NULL,
+    to_emails TEXT DEFAULT '',
+    cc_emails TEXT DEFAULT '',
+    UNIQUE(school_code, department)
   );
 
   CREATE TABLE IF NOT EXISTS exigencies (
     id TEXT PRIMARY KEY,
     school_code TEXT NOT NULL,
     school_raw TEXT,
+    department TEXT,
+    critical INTEGER DEFAULT 0,
+    location TEXT,
+    date_of_incident TEXT,
     issue TEXT,
-    owner TEXT,
+    attachments TEXT,
+    immediate_actions TEXT,
+    resolved TEXT DEFAULT 'No',
+    closure_date TEXT,
+    resolved_date TEXT,
+    suggested_changes TEXT,
     submitter_email TEXT,
     created_at TEXT NOT NULL,
-    followup_date TEXT,
-    status TEXT NOT NULL DEFAULT 'Open',
-    next_due_date TEXT,
-    closed_date TEXT,
     last_reminder_date TEXT,
     reminder_count INTEGER DEFAULT 0,
     sync_status TEXT DEFAULT 'Synced',
@@ -66,31 +89,40 @@ db.exec(`
   );
 `);
 
-/** Seeds sane defaults on first run only (never overwrites existing rows). */
+/** Seeds sane defaults + real school/department/recipient data on first run only. */
 function seedDefaults() {
   const defaults = {
     AdminEmail: '',
     DefaultCC: '',
-    OrgDomain: '',
+    OrgDomain: 'fountainheadschools.org',
     FsGroupEmail: '',
-    StatusList: 'Open,In Progress,Snoozed,Closed',
-    ClosedStatus: 'Closed',
+    ResolvedValue: 'Yes',
     ReminderTriggerHour: '8',
     DashboardTriggerHour: '9',
-    'StatusColor:Open': '#FBBC04',
-    'StatusColor:In Progress': '#4285F4',
-    'StatusColor:Snoozed': '#A142F4',
-    'StatusColor:Closed': '#34A853'
+    CriticalColor: '#EA4335',
+    ResolvedColor: '#34A853',
+    UnresolvedColor: '#FBBC04'
   };
-  const insert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
-  Object.entries(defaults).forEach(([key, value]) => insert.run(key, value));
+  const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+  Object.entries(defaults).forEach(([key, value]) => insertSetting.run(key, value));
 
   const schoolCount = db.prepare('SELECT COUNT(*) AS c FROM schools').get().c;
   if (schoolCount === 0) {
-    const insertSchool = db.prepare('INSERT INTO schools (code, name) VALUES (?, ?)');
-    insertSchool.run('FSK', 'FSK');
-    insertSchool.run('FSA', 'FSA');
-    insertSchool.run('FSL', 'FSL');
+    const seedData = require('./seedDepartmentRecipients.json');
+    const insertSchool = db.prepare('INSERT OR IGNORE INTO schools (code, name) VALUES (?, ?)');
+    const insertDept = db.prepare('INSERT OR IGNORE INTO departments (name) VALUES (?)');
+    const insertRecipient = db.prepare(`
+      INSERT OR IGNORE INTO department_recipients (school_code, department, to_emails, cc_emails)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    Object.entries(seedData).forEach(([schoolCode, depts]) => {
+      insertSchool.run(schoolCode, schoolCode);
+      Object.entries(depts).forEach(([deptName, recipients]) => {
+        insertDept.run(deptName);
+        insertRecipient.run(schoolCode, deptName, (recipients.to || []).join(','), (recipients.cc || []).join(','));
+      });
+    });
   }
 }
 

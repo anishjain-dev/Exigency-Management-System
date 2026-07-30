@@ -43,11 +43,17 @@ function onFormSubmit(e) {
     const payload = {
       timestamp: response.getTimestamp().toISOString(),
       submitterEmail: response.getRespondentEmail() || answers['Email Address'] || '',
-      school: answers['School Selection'] || answers['School'] || '',
-      issue: answers['Describe the Incident'] || answers['Issue'] || '',
-      owner: answers['Owner'] || '',
-      followupDate: answers['Follow-up Date'] || null,
-      status: 'Open',
+      school: answers['School Selection'] || '',
+      dateOfIncident: answers['Date of the Incident'] || null,
+      location: answers['Location'] || '',
+      department: answers['Choose the Department'] || 'Other',
+      critical: answers['Is this a Critical Issue?'] || 'No',
+      issue: answers['Describe the Incident'] || '',
+      attachments: answers['Upload photos/videos/documents'] || '',
+      immediateActions: answers['What immediate actions were taken?'] || '',
+      resolved: answers['Has the issue been resolved?'] || 'No',
+      closureDate: answers['If NOT RESOLVED, please specify the closure date.'] || null,
+      suggestedChanges: answers['Any suggested Policy, Training, Infra, Services or Process change required?'] || '',
       rawAnswers: answers
     };
 

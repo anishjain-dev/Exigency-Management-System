@@ -4,13 +4,18 @@
  * Receives Google Form submissions forwarded by the Apps Script webhook
  * (see ../../AppsScriptWebhook.gs). This replaces onFormSubmit + the master
  * sheet entirely — this endpoint IS the new "master database" entry point.
+ *
+ * Expected payload fields (mapped 1:1 from the real Form questions):
+ *   timestamp, submitterEmail, school, dateOfIncident, location, department,
+ *   critical ("Yes"/"No"), issue, attachments, immediateActions,
+ *   resolved ("Yes"/"No"), closureDate, suggestedChanges
  */
 
 const express = require('express');
 const db = require('../db');
 const { createUniqueId } = require('../services/idService');
 const { writeLog } = require('../services/logService');
-const { resolveSchoolCode, isKnownSchool, getSetting } = require('../services/settingsService');
+const { resolveSchoolCode, resolveDepartment, isKnownSchool, getSetting } = require('../services/settingsService');
 
 const router = express.Router();
 
@@ -33,7 +38,7 @@ router.post('/form-submit', (req, res) => {
   }
 
   const body = req.body || {};
-  const submitterEmail = body.submitterEmail || body.email || '';
+  const submitterEmail = body.submitterEmail || '';
   const schoolRaw = body.school || '';
   const issue = body.issue || '';
 
@@ -43,24 +48,27 @@ router.post('/form-submit', (req, res) => {
   }
 
   if (!schoolRaw || !issue) {
-    writeLog({ recipient: submitterEmail, type: 'SYNC', status: 'FAILURE', message: 'Row validation failed: missing School or Issue.' });
-    return res.status(200).json({ accepted: false, reason: 'Missing required fields (School/Issue).' });
+    writeLog({ recipient: submitterEmail, type: 'SYNC', status: 'FAILURE', message: 'Row validation failed: missing School or Issue description.' });
+    return res.status(200).json({ accepted: false, reason: 'Missing required fields (School Selection / Describe the Incident).' });
   }
 
   const schoolCode = resolveSchoolCode(schoolRaw);
-  const followupDate = body.followupDate || null;
+  const department = resolveDepartment(body.department || 'Other');
   const createdAt = body.timestamp || new Date().toISOString();
   const id = createUniqueId(schoolCode, new Date(createdAt));
+  const critical = /^y/i.test(body.critical || '') ? 1 : 0;
+  const resolved = /^y/i.test(body.resolved || '') ? 'Yes' : 'No';
 
   db.prepare(`
     INSERT INTO exigencies
-      (id, school_code, school_raw, issue, owner, submitter_email, created_at,
-       followup_date, status, next_due_date, closed_date, last_reminder_date,
-       reminder_count, sync_status, raw_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+      (id, school_code, school_raw, department, critical, location, date_of_incident,
+       issue, attachments, immediate_actions, resolved, closure_date, resolved_date,
+       suggested_changes, submitter_email, created_at, sync_status, raw_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    id, schoolCode, schoolRaw, issue, body.owner || '', submitterEmail, createdAt,
-    followupDate, body.status || 'Open', null, null, null,
+    id, schoolCode, schoolRaw, department, critical, body.location || '', body.dateOfIncident || null,
+    issue, body.attachments || '', body.immediateActions || '', resolved, body.closureDate || null,
+    resolved === 'Yes' ? createdAt : null, body.suggestedChanges || '', submitterEmail, createdAt,
     isKnownSchool(schoolCode) ? 'Synced' : 'Unmapped school',
     JSON.stringify(body)
   );

@@ -1,13 +1,12 @@
 /**
  * dashboard.js
  *
- * KPI computation for the dashboard UI — total/open/closed/pending, today's
- * follow-ups, overdue count, and school-wise breakdown.
+ * KPI computation for the dashboard UI — total/resolved/unresolved/critical,
+ * today's/overdue counts, school-wise and department-wise breakdown.
  */
 
 const express = require('express');
 const db = require('../db');
-const { getSetting } = require('../services/settingsService');
 
 const router = express.Router();
 
@@ -24,36 +23,41 @@ function dateOnly(iso) {
 }
 
 router.get('/', (req, res) => {
-  const closedStatus = getSetting('ClosedStatus', 'Closed');
   const today = todayStr();
   const rows = db.prepare('SELECT * FROM exigencies').all();
 
-  let total = 0, open = 0, closed = 0, pending = 0, todayFollowups = 0, overdue = 0;
+  let total = 0, resolved = 0, unresolved = 0, critical = 0, overdue = 0, dueToday = 0;
   const bySchool = {};
+  const byDepartment = {};
 
   rows.forEach((r) => {
     total++;
-    if (!bySchool[r.school_code]) bySchool[r.school_code] = { school: r.school_code, total: 0, open: 0, closed: 0 };
+    if (!bySchool[r.school_code]) bySchool[r.school_code] = { school: r.school_code, total: 0, resolved: 0, unresolved: 0 };
+    if (!byDepartment[r.department]) byDepartment[r.department] = { department: r.department, total: 0, resolved: 0, unresolved: 0 };
     bySchool[r.school_code].total++;
+    byDepartment[r.department].total++;
 
-    if (r.status === closedStatus) {
-      closed++;
-      bySchool[r.school_code].closed++;
+    if (r.critical) critical++;
+
+    if (r.resolved === 'Yes') {
+      resolved++;
+      bySchool[r.school_code].resolved++;
+      byDepartment[r.department].resolved++;
       return;
     }
-    open++;
-    bySchool[r.school_code].open++;
+    unresolved++;
+    bySchool[r.school_code].unresolved++;
+    byDepartment[r.department].unresolved++;
 
-    const followUp = dateOnly(r.followup_date);
-    const nextDue = dateOnly(r.next_due_date);
-    if (!nextDue) pending++;
-    if (followUp === today) todayFollowups++;
-    if (followUp && followUp <= today && !nextDue) overdue++;
+    const closureDate = dateOnly(r.closure_date);
+    if (closureDate === today) dueToday++;
+    if (!closureDate || closureDate <= today) overdue++;
   });
 
   res.json({
-    kpis: { total, open, closed, pending, todayFollowups, overdue },
-    schoolCounts: Object.values(bySchool)
+    kpis: { total, resolved, unresolved, critical, dueToday, overdue },
+    schoolCounts: Object.values(bySchool),
+    departmentCounts: Object.values(byDepartment)
   });
 });
 

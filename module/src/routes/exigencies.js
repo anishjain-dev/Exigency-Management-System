@@ -7,16 +7,19 @@
 const express = require('express');
 const db = require('../db');
 const { writeLog } = require('../services/logService');
-const { getSetting } = require('../services/settingsService');
+const { createUniqueId } = require('../services/idService');
+const { resolveSchoolCode, resolveDepartment } = require('../services/settingsService');
 
 const router = express.Router();
 
 router.get('/', (req, res) => {
-  const { school, status } = req.query;
+  const { school, department, resolved, critical } = req.query;
   let sql = 'SELECT * FROM exigencies WHERE 1=1';
   const params = [];
-  if (school) { sql += ' AND school_code = ?'; params.push(String(school).toUpperCase()); }
-  if (status) { sql += ' AND status = ?'; params.push(status); }
+  if (school) { sql += ' AND school_code = ?'; params.push(school); }
+  if (department) { sql += ' AND department = ?'; params.push(department); }
+  if (resolved) { sql += ' AND resolved = ?'; params.push(resolved); }
+  if (critical) { sql += ' AND critical = ?'; params.push(critical === 'true' || critical === '1' ? 1 : 0); }
   sql += ' ORDER BY created_at DESC';
   res.json(db.prepare(sql).all(...params));
 });
@@ -28,26 +31,28 @@ router.get('/:id', (req, res) => {
 });
 
 /**
- * Partial update — used by the dashboard to set Owner, Follow-up Date,
- * Status, Next Due Date, Closed Date. Setting Status to the closed status
- * auto-stamps Closed Date; setting Next Due Date clears Last Reminder Date
- * so reminders pause per the original spec.
+ * Partial update — used by the dashboard to set immediate_actions, resolved,
+ * closure_date, suggested_changes. Setting resolved to "Yes" auto-stamps
+ * resolved_date; changing closure_date clears last_reminder_date so
+ * reminders re-evaluate against the new date on the next run.
  */
 router.patch('/:id', (req, res) => {
   const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id);
   if (!record) return res.status(404).json({ error: 'Not found' });
 
-  const closedStatus = getSetting('ClosedStatus', 'Closed');
   const updates = {};
-  const allowed = ['owner', 'followup_date', 'status', 'next_due_date', 'closed_date'];
+  const allowed = ['department', 'critical', 'location', 'immediate_actions', 'resolved', 'closure_date', 'suggested_changes'];
   allowed.forEach((field) => {
     if (field in req.body) updates[field] = req.body[field];
   });
 
-  if (updates.status === closedStatus && !updates.closed_date && !record.closed_date) {
-    updates.closed_date = new Date().toISOString();
+  if (updates.resolved === 'Yes' && !record.resolved_date) {
+    updates.resolved_date = new Date().toISOString();
   }
-  if ('next_due_date' in updates) {
+  if (updates.resolved === 'No') {
+    updates.resolved_date = null;
+  }
+  if ('closure_date' in updates) {
     updates.last_reminder_date = null;
   }
 
@@ -64,19 +69,21 @@ router.patch('/:id', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { createUniqueId } = require('../services/idService');
-  const { resolveSchoolCode } = require('../services/settingsService');
   const body = req.body || {};
   const schoolCode = resolveSchoolCode(body.school || '');
+  const department = resolveDepartment(body.department || 'Other');
   const createdAt = new Date().toISOString();
   const id = createUniqueId(schoolCode, new Date());
 
   db.prepare(`
     INSERT INTO exigencies
-      (id, school_code, school_raw, issue, owner, submitter_email, created_at,
-       followup_date, status, sync_status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Synced')
-  `).run(id, schoolCode, body.school || '', body.issue || '', body.owner || '', body.submitterEmail || '', createdAt, body.followupDate || null, body.status || 'Open');
+      (id, school_code, school_raw, department, critical, location, date_of_incident,
+       issue, immediate_actions, resolved, submitter_email, created_at, sync_status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'No', ?, ?, 'Synced')
+  `).run(
+    id, schoolCode, body.school || '', department, body.critical ? 1 : 0, body.location || '',
+    body.dateOfIncident || null, body.issue || '', body.immediateActions || '', body.submitterEmail || '', createdAt
+  );
 
   writeLog({ recordId: id, type: 'SYNC', status: 'SUCCESS', message: 'Manually created via dashboard.' });
   res.status(201).json(db.prepare('SELECT * FROM exigencies WHERE id = ?').get(id));

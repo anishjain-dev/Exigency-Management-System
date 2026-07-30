@@ -1,20 +1,22 @@
 /**
  * schools.js
  *
- * Manage schools and each school's authorized recipient list — replaces the
- * per-school "<CODE> Emails" sheets.
+ * Manage schools, departments, and the department-based recipient mapping
+ * that replaces the original per-school "<CODE> Emails" sheets.
  */
 
 const express = require('express');
 const {
-  getSchools, upsertSchool, getSchoolUsers, addSchoolUser, removeSchoolUser
+  getSchools, upsertSchool, getDepartments, upsertDepartment,
+  getAllDepartmentRecipients, upsertDepartmentRecipients
 } = require('../services/settingsService');
 
 const router = express.Router();
 
 router.get('/', (req, res) => {
-  const schools = getSchools().map((s) => ({ ...s, users: getSchoolUsers(s.code) }));
-  res.json(schools);
+  const schools = getSchools();
+  const recipients = getAllDepartmentRecipients();
+  res.json(schools.map((s) => ({ ...s, departments: recipients[s.code] || [] })));
 });
 
 router.post('/', (req, res) => {
@@ -24,20 +26,21 @@ router.post('/', (req, res) => {
   res.status(201).json({ code: normalized });
 });
 
-router.get('/:code/users', (req, res) => {
-  res.json(getSchoolUsers(req.params.code));
+router.get('/departments', (req, res) => {
+  res.json(getDepartments());
 });
 
-router.post('/:code/users', (req, res) => {
-  const { email, role, active } = req.body || {};
-  if (!email) return res.status(400).json({ error: 'email is required' });
-  addSchoolUser(req.params.code, email, role, active);
-  res.status(201).json(getSchoolUsers(req.params.code));
+router.post('/departments', (req, res) => {
+  const { name } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name is required' });
+  upsertDepartment(name);
+  res.status(201).json(getDepartments());
 });
 
-router.delete('/users/:id', (req, res) => {
-  removeSchoolUser(req.params.id);
-  res.json({ deleted: true });
+router.put('/:code/departments/:department', (req, res) => {
+  const { to, cc } = req.body || {};
+  upsertDepartmentRecipients(req.params.code, req.params.department, to || '', cc || '');
+  res.json({ saved: true });
 });
 
 module.exports = router;

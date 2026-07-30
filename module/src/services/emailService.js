@@ -54,25 +54,27 @@ function statusPillStyle(color) {
 
 function buildHtmlEmail(record, appUrl) {
   const settings = getAllSettings();
-  const statusColors = {
-    Open: settings['StatusColor:Open'] || '#FBBC04',
-    'In Progress': settings['StatusColor:In Progress'] || '#4285F4',
-    Snoozed: settings['StatusColor:Snoozed'] || '#A142F4',
-    Closed: settings['StatusColor:Closed'] || '#34A853'
-  };
-  const status = record.status || 'Open';
-  const statusColor = statusColors[status] || '#5F6368';
-  const pendingSince = daysBetween(record.followup_date);
+  const resolvedColor = settings.ResolvedColor || '#34A853';
+  const unresolvedColor = settings.UnresolvedColor || '#FBBC04';
+  const criticalColor = settings.CriticalColor || '#EA4335';
+  const resolved = record.resolved || 'No';
+  const statusColor = resolved === 'Yes' ? resolvedColor : unresolvedColor;
+  const pendingSince = daysBetween(record.created_at);
 
   const rows = [
     ['Exigency ID', escapeHtml(record.id)],
     ['School', escapeHtml(record.school_code)],
+    ['Department', escapeHtml(record.department)],
+    ['Critical', record.critical
+      ? `<span style="${statusPillStyle(criticalColor)}">CRITICAL</span>`
+      : 'No'],
+    ['Location', escapeHtml(record.location)],
     ['Issue', escapeHtml(record.issue)],
-    ['Owner', escapeHtml(record.owner)],
-    ['Created Date', fmtDate(record.created_at)],
-    ['Follow-up Date', fmtDate(record.followup_date)],
+    ['Immediate Actions Taken', escapeHtml(record.immediate_actions) || 'N/A'],
+    ['Reported Date', fmtDate(record.created_at)],
     ['Pending Since', `${pendingSince} day${pendingSince === 1 ? '' : 's'}`],
-    ['Current Status', `<span style="${statusPillStyle(statusColor)}">${escapeHtml(status)}</span>`]
+    ['Expected Closure Date', fmtDate(record.closure_date)],
+    ['Resolved', `<span style="${statusPillStyle(statusColor)}">${escapeHtml(resolved)}</span>`]
   ];
 
   const tableRows = rows.map(([label, value]) => `
@@ -88,13 +90,13 @@ function buildHtmlEmail(record, appUrl) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f3f4;padding:24px 0;">
     <tr><td align="center">
       <table role="presentation" width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
-        <tr><td style="background:#1a73e8;padding:20px 24px;">
+        <tr><td style="background:${record.critical ? criticalColor : '#1a73e8'};padding:20px 24px;">
           <span style="color:#ffffff;font-size:20px;font-weight:700;">Exigency Management System</span><br/>
-          <span style="color:#e8f0fe;font-size:13px;">${escapeHtml(record.school_code)}</span>
+          <span style="color:#e8f0fe;font-size:13px;">${escapeHtml(record.school_code)} &middot; ${escapeHtml(record.department)}</span>
         </td></tr>
         <tr><td style="padding:20px 24px 4px 24px;">
           <p style="margin:0 0 12px 0;font-size:15px;color:#202124;">
-            The exigency below is <strong>overdue for follow-up</strong> and requires your action.
+            The exigency below is <strong>unresolved</strong> and requires your action.
           </p>
         </td></tr>
         <tr><td style="padding:0 24px;">
