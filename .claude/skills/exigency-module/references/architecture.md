@@ -40,15 +40,25 @@ user first, since this destroys any exigencies/settings they've since
 created (the user has explicitly asked in past sessions to preserve live
 data across restarts rather than wipe it casually).
 
-## Why recipient override is additive, not a replacement
+## Why recipient override is exclusive (as of the latest session), not additive
 
-Earlier in this project, `ForceRecipientEmail` fully replaced the
-computed `to` list. The user later clarified they wanted the real
-concerned department person to ALSO get the mail, not be silently
-excluded from it — so `emailService.applyRecipientOverride()` now unions
-`ForceRecipientEmail` into `to` (deduped) rather than swapping it out. If
-asked to add another override-style setting, default to additive
-behavior unless the user explicitly asks for exclusive/test-only routing.
+This flipped twice now — know the full history before changing it again:
+
+1. Originally `ForceRecipientEmail` fully replaced the computed `to` list
+   (exclusive).
+2. The user then asked for the real department person to ALSO get the
+   mail, so it became additive (union of `ForceRecipientEmail` into `to`).
+3. In the most recent session the user explicitly asked again for
+   exclusive/test-only routing ("KISI KO BHI MAIL NAHI JANA CHAIYEE... SIRF
+   MUJE AANA CHAIYEE" — nobody else should get mail, only me) while setting
+   `ForceRecipientEmail` to their own address. `applyRecipientOverride()`
+   in `emailService.js` was changed back to fully replace `to` (and clears
+   `cc`) with `ForceRecipientEmail`, dropping the real department
+   recipients entirely.
+
+Current behavior: exclusive/replace. Don't flip this back to additive
+without the user explicitly asking for it again — check with them first,
+since this has already reversed once per an earlier unprompted assumption.
 
 ## Why `MailingEnabled` exists as a separate switch from recipients
 
