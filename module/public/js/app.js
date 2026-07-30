@@ -5,12 +5,21 @@
  * Express API only (relative /api/... paths).
  */
 
+const TAB_TITLES = {
+  dashboard: 'Dashboard',
+  exigencies: 'Exigencies',
+  schools: 'Schools & Recipients',
+  settings: 'Settings',
+  logs: 'Logs'
+};
+
 document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    document.getElementById('pageTitle').textContent = TAB_TITLES[btn.dataset.tab] || '';
     if (btn.dataset.tab === 'dashboard') loadDashboard();
     if (btn.dataset.tab === 'exigencies') loadExigencies();
     if (btn.dataset.tab === 'schools') loadSchools();
@@ -34,23 +43,53 @@ function fmtDate(iso) {
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+const KPI_DEFS = [
+  { key: 'total', label: 'Total' },
+  { key: 'unresolved', label: 'Unresolved', accent: 'accent-warning' },
+  { key: 'resolved', label: 'Resolved', accent: 'accent-success' },
+  { key: 'critical', label: 'Critical', accent: 'accent-critical' },
+  { key: 'dueToday', label: 'Due Today', accent: 'accent-warning' },
+  { key: 'overdue', label: 'Overdue', accent: 'accent-critical' }
+];
+
 async function loadDashboard() {
   const { kpis, schoolCounts, departmentCounts } = await api('/dashboard');
-  const grid = document.getElementById('kpiGrid');
-  grid.innerHTML = [
-    ['Total', kpis.total], ['Unresolved', kpis.unresolved], ['Resolved', kpis.resolved],
-    ['Critical', kpis.critical], ["Due Today", kpis.dueToday], ['Overdue', kpis.overdue]
-  ].map(([label, value]) => `
-    <div class="kpi-card"><div class="value">${value}</div><div class="label">${label}</div></div>
+
+  document.getElementById('kpiGrid').innerHTML = KPI_DEFS.map((def) => `
+    <div class="kpi-card ${def.accent || ''}">
+      <div class="value">${kpis[def.key] ?? 0}</div>
+      <div class="label">${def.label}</div>
+    </div>
   `).join('');
 
-  document.querySelector('#schoolCountsTable tbody').innerHTML = schoolCounts.map((s) => `
-    <tr><td>${s.school}</td><td>${s.total}</td><td>${s.unresolved}</td><td>${s.resolved}</td></tr>
-  `).join('');
+  renderBarList('schoolBars', schoolCounts, 'school');
+  renderBarList('departmentBars', departmentCounts, 'department');
+}
 
-  document.querySelector('#departmentCountsTable tbody').innerHTML = departmentCounts.map((d) => `
-    <tr><td>${d.department}</td><td>${d.total}</td><td>${d.unresolved}</td><td>${d.resolved}</td></tr>
-  `).join('');
+/**
+ * Renders a compact horizontal stacked bar (unresolved + resolved) per row,
+ * scaled against the largest total in the set.
+ */
+function renderBarList(containerId, rows, labelKey) {
+  const container = document.getElementById(containerId);
+  if (!rows.length) {
+    container.innerHTML = '<div class="bar-empty">No data yet.</div>';
+    return;
+  }
+  const maxTotal = Math.max(...rows.map((r) => r.total), 1);
+  container.innerHTML = rows.map((r) => {
+    const unresolvedPct = (r.unresolved / maxTotal) * 100;
+    const resolvedPct = (r.resolved / maxTotal) * 100;
+    return `
+      <div class="bar-row">
+        <div class="bar-label" title="${r[labelKey]}">${r[labelKey]}</div>
+        <div class="bar-track">
+          <div class="bar-fill-unresolved" style="width:${unresolvedPct}%"></div>
+          <div class="bar-fill-resolved" style="width:${resolvedPct}%"></div>
+        </div>
+        <div class="bar-total">${r.total}</div>
+      </div>`;
+  }).join('');
 }
 
 document.getElementById('runReminderBtn').addEventListener('click', async () => {
@@ -75,12 +114,16 @@ async function loadExigencies() {
   if (resolved) params.set('resolved', resolved);
 
   const rows = await api('/exigencies?' + params.toString());
-  document.querySelector('#exigenciesTable tbody').innerHTML = rows.map((r) => `
+  const tbody = document.querySelector('#exigenciesTable tbody');
+  const emptyState = document.getElementById('exigenciesEmpty');
+
+  emptyState.hidden = rows.length !== 0;
+  tbody.innerHTML = rows.map((r) => `
     <tr data-id="${r.id}">
       <td>${r.id}</td>
       <td>${r.school_code}</td>
       <td>${r.department || ''}</td>
-      <td>${r.critical ? '<span class="status-pill" style="background:#EA4335;">CRITICAL</span>' : 'No'}</td>
+      <td>${r.critical ? '<span class="status-pill pill-critical">CRITICAL</span>' : '<span class="status-pill pill-muted">No</span>'}</td>
       <td title="${(r.issue || '').replace(/"/g, '&quot;')}">${(r.issue || '').slice(0, 40)}</td>
       <td>${r.location || ''}</td>
       <td><input class="edit-actions" value="${(r.immediate_actions || '').replace(/"/g, '&quot;')}" /></td>
