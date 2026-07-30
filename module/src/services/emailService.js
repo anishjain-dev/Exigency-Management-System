@@ -53,21 +53,25 @@ function statusPillStyle(color) {
 }
 
 /**
- * If Settings!ForceRecipientEmail is set, every outgoing mail (reminder AND
- * new-submission notification) is redirected to ONLY that address — real
- * department/CC recipients are computed as normal upstream but replaced here,
- * so switching this off later requires no other code change. The originally
- * intended recipients are preserved in the log message for visibility.
+ * If Settings!ForceRecipientEmail is set (comma-separated, one or more
+ * addresses), every outgoing mail (reminder AND new-submission notification)
+ * is redirected to ONLY those addresses — real department/CC recipients are
+ * computed as normal upstream but replaced here, so switching this off later
+ * requires no other code change. The originally intended recipients are
+ * preserved in the log message for visibility.
  * @param {Array<string>} to
  * @param {Array<string>} cc
  * @return {{to: Array<string>, cc: Array<string>, overridden: boolean, originalTo: Array<string>, originalCc: Array<string>}}
  */
 function applyRecipientOverride(to, cc) {
-  const forceEmail = String(getAllSettings().ForceRecipientEmail || '').trim();
-  if (!forceEmail) {
+  const forceEmails = String(getAllSettings().ForceRecipientEmail || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (forceEmails.length === 0) {
     return { to: to || [], cc: cc || [], overridden: false, originalTo: to || [], originalCc: cc || [] };
   }
-  return { to: [forceEmail], cc: [], overridden: true, originalTo: to || [], originalCc: cc || [] };
+  return { to: forceEmails, cc: [], overridden: true, originalTo: to || [], originalCc: cc || [] };
 }
 
 function buildHtmlEmail(record, appUrl) {
