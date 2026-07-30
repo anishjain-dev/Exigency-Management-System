@@ -113,3 +113,13 @@ rename it back to `onFormSubmit`, as V8 Apps Script runtime lets two
 same-named top-level functions across files silently shadow each other
 based on load order, which is exactly the kind of bug that's invisible
 until it isn't.
+
+`module/ExigencyModuleWebhook.gs` (spreadsheet-bound, `sendToExigencyModule`
+handler, `FORM_ID` constant, `installExigencyModuleTrigger()` installer) is
+the actual script live in the user's Apps Script project — this is the one
+to keep `WEBHOOK_URL` in sync with. `module/AppsScriptWebhook.gs`
+(form-bound, `onFormSubmit` handler, `installTrigger()` installer,
+referenced by `module/README.md`'s setup steps) documents the originally
+intended simpler setup but is NOT what's actually deployed; keep its
+`WEBHOOK_URL` pointed at the same tunnel for consistency, but don't assume
+it's the one receiving real traffic.

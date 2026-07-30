@@ -28,7 +28,7 @@
  * 'bypass-tunnel-reminder' header below is present — which it is.
  */
 
-const WEBHOOK_URL = 'https://considered-worldwide-postage-magazines.trycloudflare.com/api/webhook/form-submit';
+const WEBHOOK_URL = 'https://owned-proceeds-orders-door.trycloudflare.com/api/webhook/form-submit';
 const WEBHOOK_SECRET = 'change-me-to-a-long-random-string'; // must match module/.env
 
 /**
