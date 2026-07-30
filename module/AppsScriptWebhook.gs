@@ -9,8 +9,9 @@
  *
  * Setup:
  *   1. Start the local module: `npm install && npm start` (see module/README.md).
- *   2. Expose it publicly with a tunnel, e.g.: `ngrok http 4000`
- *      Copy the printed https://xxxx.ngrok-free.app URL.
+ *   2. Expose it publicly with a tunnel, e.g.: `npx localtunnel --port 4000`
+ *      (or `ngrok http 4000` if you have a working ngrok agent). Copy the
+ *      printed public URL.
  *   3. In this file, set WEBHOOK_URL below to that URL + "/api/webhook/form-submit".
  *   4. Set WEBHOOK_SECRET below to the exact same value as WEBHOOK_SECRET in
  *      module/.env on your machine.
@@ -19,12 +20,15 @@
  *   6. Submit the Form — the module's dashboard (http://localhost:4000)
  *      should show the new exigency within a second or two.
  *
- * Whenever ngrok restarts, its URL changes — update WEBHOOK_URL and re-run
- * onFormSubmit will pick up the new value automatically (no need to
- * re-install the trigger, just edit the constant and save).
+ * Whenever the tunnel restarts, its URL changes — update WEBHOOK_URL and
+ * save; no need to re-run installTrigger().
+ *
+ * NOTE: localtunnel (loca.lt) shows a one-time browser interstitial page to
+ * humans, but requires no such thing for direct HTTP calls as long as the
+ * 'bypass-tunnel-reminder' header below is present — which it is.
  */
 
-const WEBHOOK_URL = 'https://YOUR-NGROK-SUBDOMAIN.ngrok-free.app/api/webhook/form-submit';
+const WEBHOOK_URL = 'https://afraid-mice-fry.loca.lt/api/webhook/form-submit';
 const WEBHOOK_SECRET = 'change-me-to-a-long-random-string'; // must match module/.env
 
 /**
@@ -60,7 +64,10 @@ function onFormSubmit(e) {
     const options = {
       method: 'post',
       contentType: 'application/json',
-      headers: { 'X-Webhook-Secret': WEBHOOK_SECRET },
+      headers: {
+        'X-Webhook-Secret': WEBHOOK_SECRET,
+        'bypass-tunnel-reminder': 'true'
+      },
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     };
