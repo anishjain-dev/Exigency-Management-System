@@ -52,6 +52,24 @@ function statusPillStyle(color) {
   return `display:inline-block;padding:2px 10px;border-radius:12px;background:${color};color:#ffffff;font-size:12px;font-weight:600;`;
 }
 
+/**
+ * If Settings!ForceRecipientEmail is set, every outgoing mail (reminder AND
+ * new-submission notification) is redirected to ONLY that address — real
+ * department/CC recipients are computed as normal upstream but replaced here,
+ * so switching this off later requires no other code change. The originally
+ * intended recipients are preserved in the log message for visibility.
+ * @param {Array<string>} to
+ * @param {Array<string>} cc
+ * @return {{to: Array<string>, cc: Array<string>, overridden: boolean, originalTo: Array<string>, originalCc: Array<string>}}
+ */
+function applyRecipientOverride(to, cc) {
+  const forceEmail = String(getAllSettings().ForceRecipientEmail || '').trim();
+  if (!forceEmail) {
+    return { to: to || [], cc: cc || [], overridden: false, originalTo: to || [], originalCc: cc || [] };
+  }
+  return { to: [forceEmail], cc: [], overridden: true, originalTo: to || [], originalCc: cc || [] };
+}
+
 function buildHtmlEmail(record, appUrl) {
   const settings = getAllSettings();
   const resolvedColor = settings.ResolvedColor || '#34A853';
@@ -121,14 +139,16 @@ function buildHtmlEmail(record, appUrl) {
 }
 
 async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUrl) {
-  const recipients = (toEmails || []).filter(Boolean);
+  const settings = getAllSettings();
+  const ccFallback = (ccEmails && ccEmails.length ? ccEmails : String(settings.DefaultCC || '').split(',').map((s) => s.trim()).filter(Boolean));
+  const { to: recipients, cc, overridden, originalTo } = applyRecipientOverride(toEmails, ccFallback);
+
   if (recipients.length === 0) {
     writeLog({ recordId: record.id, type: reminderType, status: 'SKIPPED', message: 'No recipients resolved.' });
     return false;
   }
 
-  const settings = getAllSettings();
-  const cc = (ccEmails && ccEmails.length ? ccEmails : String(settings.DefaultCC || '').split(',').map((s) => s.trim()).filter(Boolean));
+  const overrideNote = overridden ? ` [TEST MODE: originally intended for ${originalTo.join(', ') || 'nobody'}]` : '';
 
   try {
     const transport = getTransport();
@@ -139,10 +159,105 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
       subject: `[Exigency Reminder] ${record.id} - ${record.school_code} - Action Required`,
       html: buildHtmlEmail(record, appUrl)
     });
-    writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'SUCCESS', message: 'Reminder email sent.' });
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'SUCCESS', message: 'Reminder email sent.' + overrideNote });
     return true;
   } catch (error) {
-    writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'FAILURE', message: 'Mail send failed: ' + error.message });
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'FAILURE', message: 'Mail send failed: ' + error.message + overrideNote });
+    return false;
+  }
+}
+
+/**
+ * Builds the field/value HTML table for a brand-new submission, matching
+ * the exact visual style of the original Apps Script MakeHTMLTable()
+ * function: green header row (rgb(139,195,74)), alternating white /
+ * rgb(238,247,227) data rows, collapsed borders, Arial 10pt, fixed layout.
+ * @param {Object} record
+ * @return {string}
+ */
+function buildSubmissionTableHtml(record) {
+  const fields = [
+    ['Exigency ID', record.id],
+    ['School', record.school_code],
+    ['Department', record.department],
+    ['Critical Issue', record.critical ? 'Yes' : 'No'],
+    ['Location', record.location],
+    ['Date of Incident', fmtDate(record.date_of_incident)],
+    ['Describe the Incident', record.issue],
+    ['Immediate Actions Taken', record.immediate_actions],
+    ['Attachments', record.attachments],
+    ['Has the issue been resolved?', record.resolved],
+    ['Expected Closure Date', fmtDate(record.closure_date)],
+    ['Suggested Policy/Process Change', record.suggested_changes],
+    ['Submitted By', record.submitter_email],
+    ['Timestamp', fmtDate(record.created_at)]
+  ];
+
+  const headerCellStyle = 'overflow:hidden;padding:2px 3px;vertical-align:bottom;background-color:rgb(139,195,74);font-weight:bold;color:#ffffff;';
+  const whiteCellStyle = 'overflow:hidden;padding:4px 6px;vertical-align:top;';
+  const greenCellStyle = 'overflow:hidden;padding:4px 6px;vertical-align:top;background-color:rgb(238,247,227);';
+
+  const headerRow = `<tr style="height:21px;">
+    <td style="${headerCellStyle}width:220px;">Field</td>
+    <td style="${headerCellStyle}">Value</td>
+  </tr>`;
+
+  const dataRows = fields.map(([label, value], i) => {
+    const cellStyle = i % 2 === 0 ? whiteCellStyle : greenCellStyle;
+    return `<tr style="height:21px;">
+      <td style="${cellStyle}font-weight:bold;">${escapeHtml(label)}</td>
+      <td style="${cellStyle}">${escapeHtml(value) || 'N/A'}</td>
+    </tr>`;
+  }).join('');
+
+  return `<table cellspacing="0" cellpadding="0" dir="ltr" border="1" ` +
+    `style="table-layout:fixed;font-size:10pt;font-family:arial,sans,sans-serif;width:100%;max-width:640px;border-collapse:collapse;border:1px solid #ccc;">` +
+    `<tbody>${headerRow}${dataRows}</tbody></table>`;
+}
+
+/**
+ * Sends the instant "new exigency reported" notification, in the
+ * MakeHTMLTable field/value layout, to the department's To/CC recipients.
+ * Fired once, immediately on submission (separate from the daily reminder).
+ * @param {Object} record
+ * @param {Array<string>} toEmails
+ * @param {Array<string>} ccEmails
+ * @param {string} appUrl
+ * @return {Promise<boolean>}
+ */
+async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
+  const { to: recipients, cc, overridden, originalTo } = applyRecipientOverride(toEmails, ccEmails);
+
+  if (recipients.length === 0) {
+    writeLog({ recordId: record.id, type: 'NEW_SUBMISSION', status: 'SKIPPED', message: 'No recipients resolved for this department.' });
+    return false;
+  }
+
+  const overrideNote = overridden ? ` [TEST MODE: originally intended for ${originalTo.join(', ') || 'nobody'}]` : '';
+  const criticalPrefix = record.critical ? '[CRITICAL] ' : '';
+  const html = `
+    <div style="font-family:arial,sans,sans-serif;">
+      <p style="font-size:11pt;">A new exigency has been reported for <strong>${escapeHtml(record.school_code)}</strong>
+      (${escapeHtml(record.department)}). Details below:</p>
+      ${buildSubmissionTableHtml(record)}
+      <p style="font-size:10pt;margin-top:14px;">
+        <a href="${appUrl}" style="color:#1a73e8;">Open the Exigency Management dashboard</a>
+      </p>
+    </div>`;
+
+  try {
+    const transport = getTransport();
+    await transport.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: recipients.join(','),
+      cc: cc.join(','),
+      subject: `${criticalPrefix}New Exigency Reported: ${record.id} - ${record.school_code} - ${record.department}`,
+      html
+    });
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'NEW_SUBMISSION', status: 'SUCCESS', message: 'New submission notification sent.' + overrideNote });
+    return true;
+  } catch (error) {
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'NEW_SUBMISSION', status: 'FAILURE', message: 'Mail send failed: ' + error.message + overrideNote });
     return false;
   }
 }
@@ -164,4 +279,4 @@ async function sendCriticalErrorEmail(context, error) {
   }
 }
 
-module.exports = { sendReminderEmail, sendCriticalErrorEmail, buildHtmlEmail };
+module.exports = { sendReminderEmail, sendNewSubmissionEmail, sendCriticalErrorEmail, buildHtmlEmail, buildSubmissionTableHtml };

@@ -15,7 +15,12 @@ const express = require('express');
 const db = require('../db');
 const { createUniqueId } = require('../services/idService');
 const { writeLog } = require('../services/logService');
-const { resolveSchoolCode, resolveDepartment, isKnownSchool, getSetting } = require('../services/settingsService');
+const { resolveSchoolCode, resolveDepartment, isKnownSchool, getSetting, getDepartmentRecipients } = require('../services/settingsService');
+const { sendNewSubmissionEmail } = require('../services/emailService');
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
 
 const router = express.Router();
 
@@ -31,7 +36,7 @@ function isAuthorizedSubmitter(email) {
   return false;
 }
 
-router.post('/form-submit', (req, res) => {
+router.post('/form-submit', async (req, res) => {
   const providedSecret = req.header('X-Webhook-Secret');
   if (!process.env.WEBHOOK_SECRET || providedSecret !== process.env.WEBHOOK_SECRET) {
     return res.status(401).json({ error: 'Invalid or missing webhook secret.' });
@@ -74,6 +79,20 @@ router.post('/form-submit', (req, res) => {
   );
 
   writeLog({ recordId: id, recipient: submitterEmail, type: 'SYNC', status: 'SUCCESS', message: 'New submission stored via webhook.' });
+
+  // Notify the department's recipients immediately, in the field/value HTML
+  // table format (see EmailService.buildSubmissionTableHtml). Failure to
+  // send must never fail the webhook response — the record is already saved.
+  try {
+    const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(id);
+    const recipients = getDepartmentRecipients(schoolCode, department);
+    const to = recipients.to.filter(isValidEmail);
+    const cc = recipients.cc.filter(isValidEmail);
+    const appUrl = `${req.protocol}://${req.get('host')}`;
+    await sendNewSubmissionEmail(record, to, cc, appUrl);
+  } catch (mailError) {
+    writeLog({ recordId: id, type: 'NEW_SUBMISSION', status: 'FAILURE', message: 'Notification send threw: ' + mailError.message });
+  }
 
   res.json({ accepted: true, id });
 });

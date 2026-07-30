@@ -96,6 +96,10 @@ function seedDefaults() {
     DefaultCC: '',
     OrgDomain: 'fountainheadschools.org',
     FsGroupEmail: '',
+    // TEST MODE: when set, ALL outgoing mail (reminders + new-submission
+    // notifications) is redirected to only this address, regardless of the
+    // real department recipients. Clear this value to resume real routing.
+    ForceRecipientEmail: '',
     ResolvedValue: 'Yes',
     ReminderTriggerHour: '8',
     DashboardTriggerHour: '9',
