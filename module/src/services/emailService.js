@@ -187,10 +187,10 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
 }
 
 /**
- * Builds the field/value HTML table for a brand-new submission, matching
- * the exact visual style of the original Apps Script MakeHTMLTable()
- * function: green header row (rgb(139,195,74)), alternating white /
- * rgb(238,247,227) data rows, collapsed borders, Arial 10pt, fixed layout.
+ * Builds the "Guide & Spark" branded field/value table for a brand-new
+ * submission — Fountainhead brand colours (#005BAA blue, #B8292F red,
+ * #F2C418 yellow accent) and the guideline's own 45/45/10 colour-proportion
+ * chart, rendered as a bar under the header.
  * @param {Object} record
  * @return {string}
  */
@@ -206,32 +206,66 @@ function buildSubmissionTableHtml(record) {
     ['Is this a Critical Issue?', record.critical ? 'Yes' : 'No'],
     ['Describe the Incident', record.issue],
     ['Photos/videos/documents', record.attachments],
-    ['What immediate actions were taken?', record.immediate_actions],
-    ['Has the issue been resolved?', record.resolved],
+    ['What immediate actions were taken?', record.immediate_actions]
+  ];
+
+  const resolved = record.resolved || 'No';
+  const resolvedBadge = resolved === 'Yes'
+    ? `<span style="display:inline-block;padding:2px 10px;border-radius:100px;background:#227eb8;color:#ffffff;font-size:11.5px;font-weight:700;">RESOLVED</span>`
+    : `<span style="display:inline-block;padding:2px 10px;border-radius:100px;background:#B8292F;color:#ffffff;font-size:11.5px;font-weight:700;">NOT RESOLVED</span>`;
+
+  const trailingFields = [
     ['If NOT RESOLVED, please specify the closure date.', fmtDate(record.closure_date)],
     ['Any suggested Policy, Training, Infra, Services or Process change required?', record.suggested_changes]
   ];
 
-  const headerCellStyle = 'overflow:hidden;padding:2px 3px;vertical-align:bottom;background-color:rgb(139,195,74);font-weight:bold;color:#ffffff;';
-  const whiteCellStyle = 'overflow:hidden;padding:4px 6px;vertical-align:top;';
-  const greenCellStyle = 'overflow:hidden;padding:4px 6px;vertical-align:top;background-color:rgb(238,247,227);';
+  const rowStyle = (i) => i % 2 === 0 ? '' : 'background:#fafbfd;';
+  const labelStyle = 'padding:9px 14px;font-size:13.5px;font-weight:700;width:42%;color:#005BAA;vertical-align:top;';
+  const valueStyle = 'padding:9px 14px;font-size:13.5px;vertical-align:top;color:#202124;';
 
-  const headerRow = `<tr style="height:21px;">
-    <td style="${headerCellStyle}width:220px;">Field</td>
-    <td style="${headerCellStyle}">Value</td>
-  </tr>`;
+  const fieldRows = fields.map(([label, value], i) => `
+    <tr style="${rowStyle(i)}">
+      <td style="${labelStyle}">${escapeHtml(label)}</td>
+      <td style="${valueStyle}">${escapeHtml(value) || 'N/A'}</td>
+    </tr>`).join('');
 
-  const dataRows = fields.map(([label, value], i) => {
-    const cellStyle = i % 2 === 0 ? whiteCellStyle : greenCellStyle;
-    return `<tr style="height:21px;">
-      <td style="${cellStyle}font-weight:bold;">${escapeHtml(label)}</td>
-      <td style="${cellStyle}">${escapeHtml(value) || 'N/A'}</td>
+  const resolvedRow = `
+    <tr style="${rowStyle(fields.length)}">
+      <td style="${labelStyle}">Has the issue been resolved?</td>
+      <td style="${valueStyle}">${resolvedBadge}</td>
     </tr>`;
-  }).join('');
 
-  return `<table cellspacing="0" cellpadding="0" dir="ltr" border="1" ` +
-    `style="table-layout:fixed;font-size:10pt;font-family:arial,sans,sans-serif;width:100%;max-width:640px;border-collapse:collapse;border:1px solid #ccc;">` +
-    `<tbody>${headerRow}${dataRows}</tbody></table>`;
+  const trailingRows = trailingFields.map(([label, value], i) => `
+    <tr style="${rowStyle(fields.length + 1 + i)}">
+      <td style="${labelStyle}">${escapeHtml(label)}</td>
+      <td style="${valueStyle}">${escapeHtml(value) || 'N/A'}</td>
+    </tr>`).join('');
+
+  return `
+<table cellspacing="0" cellpadding="0" width="100%" style="max-width:620px;border-collapse:collapse;background:#ffffff;border-radius:10px;overflow:hidden;font-family:Arial,'Segoe UI',sans-serif;">
+  <tr>
+    <td style="padding:20px 20px 6px;background:#ffffff;">
+      <table cellspacing="0" cellpadding="0"><tr>
+        <td style="width:16px;height:16px;border-radius:50%;background:#005BAA;position:relative;">&nbsp;</td>
+        <td style="padding-left:8px;font-weight:800;letter-spacing:0.03em;color:#1a2230;font-size:13px;text-transform:uppercase;">Fountainhead &middot; Exigency Management</td>
+      </tr></table>
+      <div style="font-size:19px;font-weight:800;color:#1a2230;margin-top:10px;">${escapeHtml(record.id)}</div>
+      <div style="font-size:13px;color:#5b6472;margin-top:2px;">${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 20px 16px;">
+      <table cellspacing="0" cellpadding="0" width="100%"><tr>
+        <td width="45%" style="height:6px;background:#005BAA;font-size:0;line-height:0;">&nbsp;</td>
+        <td width="45%" style="height:6px;background:#B8292F;font-size:0;line-height:0;">&nbsp;</td>
+        <td width="10%" style="height:6px;background:#F2C418;font-size:0;line-height:0;">&nbsp;</td>
+      </tr></table>
+    </td>
+  </tr>
+  ${fieldRows}
+  ${resolvedRow}
+  ${trailingRows}
+</table>`;
 }
 
 /**
@@ -260,13 +294,10 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
   const overrideNote = overridden ? ` [+CC: also sent to ForceRecipientEmail list]` : '';
   const criticalPrefix = record.critical ? '[CRITICAL] ' : '';
   const html = `
-    <div style="font-family:arial,sans,sans-serif;">
-      <p style="font-size:11pt;">A new exigency has been reported for <strong>${escapeHtml(record.school_code)}</strong>
-      (${escapeHtml(record.department)}). Details below:</p>
-      ${buildSubmissionTableHtml(record)}
-      <p style="font-size:10pt;margin-top:14px;">
-        <a href="${appUrl}" style="color:#1a73e8;">Open the Exigency Management dashboard</a>
-      </p>
+    <div style="background:#f4f6fa;padding:24px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+        ${buildSubmissionTableHtml(record)}
+      </td></tr></table>
     </div>`;
 
   try {
@@ -275,7 +306,7 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `${criticalPrefix}New Exigency Reported: ${record.id} - ${record.school_code} - ${record.department}`,
+      subject: `${criticalPrefix}Exigency - ${record.school_raw || record.school_code} - ${record.department}`,
       html
     });
     writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'NEW_SUBMISSION', status: 'SUCCESS', message: 'New submission notification sent.' + overrideNote });
