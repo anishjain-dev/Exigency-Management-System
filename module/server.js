@@ -4,7 +4,7 @@
  * Entry point for the standalone Exigency Management module. Runs entirely
  * on localhost with its own SQLite database — no Google Sheets involved.
  * Google Form submissions arrive via the /api/webhook/form-submit endpoint,
- * called by the Apps Script webhook (see AppsScriptWebhook.gs).
+ * called by the Apps Script webhook (see ExigencyModuleWebhook.gs).
  */
 
 const path = require('path');

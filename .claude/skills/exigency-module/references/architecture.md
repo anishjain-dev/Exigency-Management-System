@@ -6,12 +6,11 @@ start/check/tunnel operations (those are covered in SKILL.md).
 
 ## Why this exists
 
-The original design (see `Exigency-Management-System/ARCHITECTURE.md` and
-`src/*.gs` at the repo root) was a Google Sheets + Apps Script system. The
-user asked to move off Google Sheets entirely while keeping the Google Form
-as the entry point, with data stored in the module's own database instead —
-hence "module" as a self-contained replacement, not an extension of the
-Sheets version.
+The original design was a Google Sheets + Apps Script system (since removed
+from the repo). The user asked to move off Google Sheets entirely while
+keeping the Google Form as the entry point, with data stored in the module's
+own database instead — hence "module" as a self-contained replacement, not
+an extension of the Sheets version.
 
 ## Database schema (`module/src/db.js`, SQLite via `node:sqlite`)
 
@@ -93,7 +92,7 @@ Settings API, not touching the matching logic itself.
   the set — reuse this pattern rather than adding a charting library if
   asked for more visualizations.
 
-## Apps Script side (`module/AppsScriptWebhook.gs` + the live project)
+## Apps Script side (`module/ExigencyModuleWebhook.gs` + the live project)
 
 The live Apps Script project (opened via the Form's "Extensions > Apps
 Script") turned out to be bound to the response **spreadsheet**, not the
@@ -116,10 +115,9 @@ until it isn't.
 
 `module/ExigencyModuleWebhook.gs` (spreadsheet-bound, `sendToExigencyModule`
 handler, `FORM_ID` constant, `installExigencyModuleTrigger()` installer) is
-the actual script live in the user's Apps Script project — this is the one
-to keep `WEBHOOK_URL` in sync with. `module/AppsScriptWebhook.gs`
-(form-bound, `onFormSubmit` handler, `installTrigger()` installer,
-referenced by `module/README.md`'s setup steps) documents the originally
-intended simpler setup but is NOT what's actually deployed; keep its
-`WEBHOOK_URL` pointed at the same tunnel for consistency, but don't assume
-it's the one receiving real traffic.
+the actual script live in the user's Apps Script project and the only
+webhook script in the repo — this is the one to keep `WEBHOOK_URL` in sync
+with. The earlier form-bound alternative (`AppsScriptWebhook.gs`,
+`onFormSubmit`/`installTrigger()`) was never actually deployed and has been
+removed from the repo; `module/README.md`'s setup steps now point at
+`ExigencyModuleWebhook.gs` instead.

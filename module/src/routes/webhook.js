@@ -2,7 +2,7 @@
  * webhook.js
  *
  * Legacy intake path for Google Form submissions forwarded by the Apps
- * Script webhook (see ../../AppsScriptWebhook.gs / ExigencyModuleWebhook.gs).
+ * Script webhook (see ../../ExigencyModuleWebhook.gs).
  * Kept for backward compatibility, but the module's own built-in form
  * (see routes/report.js, served at /report.html) is now the primary path —
  * it needs no Google Form, Apps Script trigger, or tunnel at all.

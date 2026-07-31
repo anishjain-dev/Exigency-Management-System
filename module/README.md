@@ -10,7 +10,7 @@ a single lightweight webhook forwarder.
 
 ```
 Google Form (submission only)
-        │  Apps Script installable trigger (AppsScriptWebhook.gs)
+        │  Apps Script installable trigger (ExigencyModuleWebhook.gs)
         ▼
    ngrok tunnel (forwards public URL -> your localhost)
         ▼
@@ -74,20 +74,21 @@ time you restart ngrok on the free tier.
 
 ## 4. Wire up the Google Form
 
-1. Open the Google Form in the **Form editor** (not the spreadsheet).
+1. Open the Form's **response spreadsheet** (not the Form editor).
 2. **Extensions → Apps Script**.
-3. Create a new file `AppsScriptWebhook.gs` and paste in the contents of
-   [`AppsScriptWebhook.gs`](AppsScriptWebhook.gs) from this folder.
-4. Set `WEBHOOK_URL` to your ngrok URL + `/api/webhook/form-submit`, e.g.:
-   `https://xxxx.ngrok-free.app/api/webhook/form-submit`
+3. Create a new file `ExigencyModuleWebhook.gs` and paste in the contents of
+   [`ExigencyModuleWebhook.gs`](ExigencyModuleWebhook.gs) from this folder.
+4. Set `FORM_ID` to your Form's ID (from its URL), `WEBHOOK_URL` to your
+   tunnel URL + `/api/webhook/form-submit`, e.g.:
+   `https://xxxx.trycloudflare.com/api/webhook/form-submit`
 5. Set `WEBHOOK_SECRET` to the exact same value as `.env`'s `WEBHOOK_SECRET`.
-6. Save, then run **`installTrigger`** once from the function dropdown —
-   grant permissions when prompted.
+6. Save, then run **`installExigencyModuleTrigger`** once from the function
+   dropdown — grant permissions when prompted.
 7. Submit the Form — within a second or two, refresh the dashboard's
    **Exigencies** tab and the new row should appear.
 
-Whenever you restart `ngrok`, its URL changes — just update `WEBHOOK_URL` in
-the Apps Script file and save; no need to reinstall the trigger.
+Whenever you restart your tunnel, its URL changes — just update `WEBHOOK_URL`
+in the Apps Script file and save; no need to reinstall the trigger.
 
 ## 5. Configure Settings
 
