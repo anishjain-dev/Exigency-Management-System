@@ -166,7 +166,10 @@ async function loadExigencies() {
       <td><input class="edit-closure" type="date" value="${r.closure_date ? r.closure_date.slice(0,10) : ''}" /></td>
       <td>
         ${r.reply_count > 0
-          ? `<button class="view-replies-btn" data-id="${r.id}">Replied (${r.reply_count})</button><div class="reply-timestamp">${fmtDateTime(r.last_reply_at)}</div>`
+          ? `<button class="view-replies-btn" data-id="${r.id}" title="${(r.last_reply_text || '').replace(/"/g, '&quot;')}">
+               <span class="reply-snippet">${(r.last_reply_text || '').slice(0, 60)}${(r.last_reply_text || '').length > 60 ? '…' : ''}</span>
+               ${r.reply_count > 1 ? `<span class="reply-count-badge">+${r.reply_count - 1} more</span>` : ''}
+             </button><div class="reply-timestamp">${fmtDateTime(r.last_reply_at)}</div>`
           : '<span class="status-pill pill-muted">No reply</span>'}
       </td>
       <td><button class="save-row-btn">Save</button></td>
@@ -194,11 +197,24 @@ async function loadExigencies() {
       if (!detailRow.hidden) { detailRow.hidden = true; return; }
 
       const replies = await api(`/exigencies/${btn.dataset.id}/replies`);
-      detailRow.querySelector('td').innerHTML = '<div class="reply-thread">' + replies.map((rep) => `
+      detailRow.querySelector('td').innerHTML = '<div class="reply-thread">' + replies.map((rep) => {
+        const displayName = rep.from_name || rep.from_email || 'Unknown sender';
+        const initials = displayName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+        return `
         <div class="reply-item">
-          <div class="reply-meta"><strong>${rep.from_email || 'Unknown sender'}</strong> — ${fmtDateTime(rep.received_at)}</div>
-          <div class="reply-body">${(rep.body_text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
-        </div>`).join('') + '</div>';
+          <div class="reply-avatar">${initials}</div>
+          <div class="reply-content">
+            <div class="reply-header">
+              <div class="reply-who">
+                <span class="reply-name">${displayName}</span>
+                ${rep.from_name ? `<span class="reply-email">${rep.from_email}</span>` : ''}
+              </div>
+              <div class="reply-time">${fmtDateTime(rep.received_at)}</div>
+            </div>
+            <div class="reply-body">${(rep.body_text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
+          </div>
+        </div>`;
+      }).join('') + '</div>';
       detailRow.hidden = false;
     });
   });

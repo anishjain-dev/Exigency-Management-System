@@ -17,7 +17,7 @@ const { getSetting } = require('./src/services/settingsService');
 const { runDailyReminderJob } = require('./src/services/reminderService');
 const { sendCriticalErrorEmail } = require('./src/services/emailService');
 const { writeLog } = require('./src/services/logService');
-const { checkForReplies } = require('./src/services/replyService');
+const { checkForReplies, startReplyWatcher } = require('./src/services/replyService');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -61,11 +61,16 @@ app.listen(PORT, () => {
   // Settings UI + restarting the server to pick up the new time.
   scheduleReminderCron();
 
-  // Poll the inbox for replies to outgoing exigency emails every minute.
-  cron.schedule('* * * * *', () => {
+  // Watch the inbox for replies in near-real-time via IMAP IDLE (picks up
+  // new mail within seconds instead of waiting for a poll interval). Runs
+  // forever, reconnecting on its own if the connection drops.
+  startReplyWatcher().catch((error) => console.error('Reply watcher crashed:', error));
+
+  // Safety net: also poll every 5 minutes in case IDLE silently stops
+  // without erroring (network changes, sleep/wake, etc).
+  cron.schedule('*/5 * * * *', () => {
     checkForReplies().catch((error) => console.error('Reply check failed:', error));
   });
-  checkForReplies().catch((error) => console.error('Reply check failed:', error));
 });
 
 let currentTask = null;

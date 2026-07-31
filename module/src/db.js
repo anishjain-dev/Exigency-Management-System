@@ -93,6 +93,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS email_replies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     record_id TEXT NOT NULL,
+    from_name TEXT,
     from_email TEXT,
     subject TEXT,
     body_text TEXT,
@@ -100,6 +101,14 @@ db.exec(`
     message_id TEXT UNIQUE
   );
 `);
+
+// Migration: email_replies.from_name didn't exist in earlier versions of this
+// table — add it if missing rather than relying on CREATE TABLE IF NOT EXISTS,
+// which is a no-op once the table already exists on disk.
+const replyColumns = db.prepare("PRAGMA table_info(email_replies)").all().map((c) => c.name);
+if (!replyColumns.includes('from_name')) {
+  db.exec('ALTER TABLE email_replies ADD COLUMN from_name TEXT');
+}
 
 /** Seeds sane defaults + real school/department/recipient data on first run only. */
 function seedDefaults() {

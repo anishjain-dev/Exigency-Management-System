@@ -17,6 +17,7 @@ router.get('/', (req, res) => {
   let sql = `
     SELECT e.*,
       (SELECT COUNT(*) FROM email_replies r WHERE r.record_id = e.id) AS reply_count,
+      (SELECT body_text FROM email_replies r WHERE r.record_id = e.id ORDER BY received_at DESC LIMIT 1) AS last_reply_text,
       (SELECT MAX(received_at) FROM email_replies r WHERE r.record_id = e.id) AS last_reply_at
     FROM exigencies e WHERE 1=1`;
   const params = [];
