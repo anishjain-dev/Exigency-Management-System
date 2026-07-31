@@ -102,6 +102,58 @@ input, select, textarea {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* ---------- Custom dropdown (School / Department) ---------- */
+/* Native <select> always shows the current value twice (closed box +
+   highlighted in the open list) — this avoids that entirely. */
+
+.custom-select { position: relative; }
+
+.custom-select-trigger {
+  width: 100%;
+  text-align: left;
+  font-family: 'Nunito', 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fbfcfe url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b6472'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 12px center;
+  background-size: 18px;
+  color: var(--sub);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.custom-select-trigger.has-value { color: var(--ink); }
+.custom-select-trigger:focus, .custom-select-trigger[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0,91,170,0.15);
+}
+.custom-select-trigger.invalid { border-color: var(--red); }
+
+.custom-select-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.custom-select-option {
+  padding: 10px 13px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.custom-select-option:hover,
+.custom-select-option.highlighted { background: var(--tint); }
+.custom-select-option.selected { background: var(--blue); color: #ffffff; }
+
 select { cursor: pointer; }
 
 input:focus, select:focus, textarea:focus {

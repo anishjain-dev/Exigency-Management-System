@@ -22,10 +22,11 @@
       </div>
 
       <div class="field">
-        <label for="school">School Selection <span class="req">*</span></label>
-        <select id="school" name="school" required>
-          <option value="" disabled selected hidden>Select school&hellip;</option>
-        </select>
+        <label id="schoolLabel">School Selection <span class="req">*</span></label>
+        <div class="custom-select" id="schoolSelect">
+          <button type="button" class="custom-select-trigger" id="schoolTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="schoolLabel">Select school&hellip;</button>
+          <div class="custom-select-options" id="schoolOptions" role="listbox" hidden></div>
+        </div>
       </div>
 
       <div class="row2">
@@ -41,10 +42,11 @@
 
       <div class="row2">
         <div class="field">
-          <label for="department">Department <span class="req">*</span></label>
-          <select id="department" name="department" required>
-            <option value="" disabled selected hidden>Select department&hellip;</option>
-          </select>
+          <label id="departmentLabel">Department <span class="req">*</span></label>
+          <div class="custom-select" id="departmentSelect">
+            <button type="button" class="custom-select-trigger" id="departmentTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="departmentLabel">Select department&hellip;</button>
+            <div class="custom-select-options" id="departmentOptions" role="listbox" hidden></div>
+          </div>
         </div>
         <div class="field">
           <label for="critical">Is this a Critical Issue? <span class="req">*</span></label>

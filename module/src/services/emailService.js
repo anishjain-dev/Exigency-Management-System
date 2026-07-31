@@ -6,9 +6,14 @@
  * Every send attempt is logged (success or failure).
  */
 
+const path = require('path');
 const nodemailer = require('nodemailer');
 const { writeLog } = require('./logService');
 const { getAllSettings } = require('./settingsService');
+
+const LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'images', 'fountainhead-logo.png');
+const LOGO_CID = 'fountainhead-logo';
+const LOGO_ATTACHMENT = { filename: 'fountainhead-logo.png', path: LOGO_PATH, cid: LOGO_CID };
 
 function getTransport() {
   return nodemailer.createTransport({
@@ -73,24 +78,25 @@ function badgePill(text, bg) {
 /**
  * Shared letterhead header used by every outgoing email: the real
  * Fountainhead logo on white (the logo's own blue/red would disappear on a
- * blue band), then the brand's own 45/45/10 colour-proportion chart
- * rendered as a thin rule directly beneath it.
+ * blue band), embedded as a CID attachment (see LOGO_ATTACHMENT) so it
+ * always renders regardless of whether the module is reachable from the
+ * recipient's network — then the brand's own 45/45/10 colour-proportion
+ * chart rendered as a thin rule directly beneath it.
  * @param {string} title
  * @param {string} subtitle
- * @param {string} appUrl - absolute origin, e.g. "http://localhost:4000", so the logo resolves in an email client
  * @return {string}
  */
-function brandMasthead(title, subtitle, appUrl) {
+function brandMasthead(title, subtitle) {
   return `
   <tr>
-    <td style="background:#ffffff;padding:22px 26px 18px;">
-      <img src="${appUrl}/images/fountainhead-logo.png" alt="Fountainhead" height="28" style="height:28px;width:auto;display:block;margin-bottom:14px;" />
+    <td colspan="2" style="background:#ffffff;padding:22px 26px 18px;">
+      <img src="cid:${LOGO_CID}" alt="Fountainhead" height="28" style="height:28px;width:auto;display:block;margin-bottom:14px;" />
       <div style="font-family:${BRAND.headFont};color:${BRAND.blue};font-size:20px;font-weight:800;">${escapeHtml(title)}</div>
       ${subtitle ? `<div style="font-family:${BRAND.bodyFont};color:${BRAND.sub};font-size:13px;margin-top:3px;">${subtitle}</div>` : ''}
     </td>
   </tr>
   <tr>
-    <td style="padding:0;">
+    <td colspan="2" style="padding:0;">
       <table cellspacing="0" cellpadding="0" width="100%"><tr>
         <td width="45%" style="height:5px;background:${BRAND.blue};font-size:0;line-height:0;">&nbsp;</td>
         <td width="45%" style="height:5px;background:${BRAND.red};font-size:0;line-height:0;">&nbsp;</td>
@@ -104,7 +110,7 @@ function brandMasthead(title, subtitle, appUrl) {
 function brandFooter() {
   return `
   <tr>
-    <td style="background:${BRAND.tintBlue};padding:14px 26px;border-top:1px solid #dbe6f0;">
+    <td colspan="2" style="background:${BRAND.tintBlue};padding:14px 26px;border-top:1px solid #dbe6f0;">
       <p style="margin:0;font-family:${BRAND.bodyFont};font-size:11px;color:${BRAND.sub};">
         Fountainhead &middot; Exigency Management System &mdash; automated notification, please do not reply.
       </p>
@@ -171,18 +177,18 @@ function buildHtmlEmail(record, appUrl) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa;padding:24px 0;">
     <tr><td align="center">
       <table role="presentation" width="100%" style="max-width:620px;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
-        ${brandMasthead('Action Required', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`, appUrl)}
-        <tr><td style="padding:16px 26px 4px;">
+        ${brandMasthead('Action Required', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`)}
+        <tr><td colspan="2" style="padding:16px 26px 4px;">
           <p style="margin:0 0 8px 0;font-family:${BRAND.bodyFont};font-size:14.5px;color:${BRAND.ink};">
             The exigency below is <strong>unresolved</strong> and requires your action.
           </p>
         </td></tr>
-        <tr><td style="padding:0 12px 8px;">
+        <tr><td colspan="2" style="padding:0 12px 8px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
             ${brandFieldTable(rows)}
           </table>
         </td></tr>
-        <tr><td style="padding:20px 26px 24px;">
+        <tr><td colspan="2" style="padding:20px 26px 24px;">
           <a href="${appUrl}" style="display:inline-block;background:${BRAND.red};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:6px;font-family:${BRAND.headFont};font-size:13.5px;font-weight:700;">
             Open Dashboard
           </a>
@@ -228,7 +234,8 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
       to: recipients.join(','),
       cc: cc.join(','),
       subject: `Reminder: Exigency - ${record.school_raw || record.school_code} - ${record.department}`,
-      html: buildHtmlEmail(record, appUrl)
+      html: buildHtmlEmail(record, appUrl),
+      attachments: [LOGO_ATTACHMENT]
     });
     writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'SUCCESS', message: 'Reminder email sent.' + overrideNote });
     return true;
@@ -244,10 +251,9 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
  * #F2C418 yellow accent) and the guideline's own 45/45/10 colour-proportion
  * chart, rendered as a bar under the header.
  * @param {Object} record
- * @param {string} appUrl
  * @return {string}
  */
-function buildSubmissionTableHtml(record, appUrl) {
+function buildSubmissionTableHtml(record) {
   const resolved = record.resolved || 'No';
   const rows = [
     ['Form Number', escapeHtml(record.id)],
@@ -268,7 +274,7 @@ function buildSubmissionTableHtml(record, appUrl) {
 
   return `
 <table cellspacing="0" cellpadding="0" width="100%" style="max-width:620px;border-collapse:collapse;background:#ffffff;border-radius:10px;overflow:hidden;">
-  ${brandMasthead('New Exigency Reported', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`, appUrl)}
+  ${brandMasthead('New Exigency Reported', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`)}
   ${brandFieldTable(rows)}
   ${brandFooter()}
 </table>`;
@@ -302,7 +308,7 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
   const html = `
     <div style="background:#f4f6fa;padding:24px 0;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-        ${buildSubmissionTableHtml(record, appUrl)}
+        ${buildSubmissionTableHtml(record)}
       </td></tr></table>
     </div>`;
 
@@ -313,7 +319,8 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
       to: recipients.join(','),
       cc: cc.join(','),
       subject: `${criticalPrefix}Exigency - ${record.school_raw || record.school_code} - ${record.department}`,
-      html
+      html,
+      attachments: [LOGO_ATTACHMENT]
     });
     writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'NEW_SUBMISSION', status: 'SUCCESS', message: 'New submission notification sent.' + overrideNote });
     return true;
