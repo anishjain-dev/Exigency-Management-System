@@ -110,6 +110,11 @@ async function checkForReplies() {
   }
 
   const client = new ImapFlow({ host: config.host, port: config.port, secure: config.secure, auth: config.auth, logger: false });
+  // See startReplyWatcher for why this listener is required — an unhandled
+  // 'error' event on an EventEmitter crashes the whole Node process.
+  client.on('error', (error) => {
+    writeLog({ recordId: '', type: 'REPLY', status: 'FAILURE', message: 'IMAP connection error: ' + error.message });
+  });
   try {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
@@ -152,6 +157,13 @@ async function startReplyWatcher() {
     const client = new ImapFlow({
       host: config.host, port: config.port, secure: config.secure, auth: config.auth,
       logger: false, maxIdleTime: 5 * 60 * 1000
+    });
+    // ImapFlow is an EventEmitter — a socket-level error (e.g. ECONNRESET)
+    // emitted outside the currently-awaited promise has no listener by
+    // default, which crashes the whole Node process, not just this
+    // function. Must attach this before connect() to catch every case.
+    client.on('error', (error) => {
+      writeLog({ recordId: '', type: 'REPLY', status: 'FAILURE', message: 'IMAP connection error: ' + error.message });
     });
     let processing = Promise.resolve();
     const onExists = () => {
