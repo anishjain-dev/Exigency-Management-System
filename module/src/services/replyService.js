@@ -127,10 +127,20 @@ async function checkForReplies() {
 
 /**
  * Keeps one IMAP connection open using IDLE so new replies are picked up
- * within seconds instead of waiting for the next poll. Gmail drops IDLE
- * sessions after ~29 minutes and the connection can drop for other reasons
- * too — on any error/close this reconnects after a short backoff, forever.
- * Call once at startup; never awaited/returns.
+ * within seconds instead of waiting for the next poll.
+ *
+ * IMPORTANT: ImapFlow's `idle()` does NOT resolve as soon as new mail
+ * arrives — per its own docs, a manually-called `idle()` "does not return
+ * until IDLE is finished", i.e. until something else interrupts it. The
+ * real-time signal is the `'exists'` event, which fires live the instant the
+ * server pushes an updated message count, independent of whether `idle()`
+ * has returned. So: `idle()` just keeps the connection parked, one listener
+ * on `'exists'` does the actual real-time processing, and `maxIdleTime`
+ * forces a periodic restart (every 5 min) as a structural safety net.
+ *
+ * Gmail also drops IDLE sessions after ~29 minutes and the connection can
+ * drop for other reasons — on any error/close this reconnects after a short
+ * backoff, forever. Call once at startup; never awaited/returns.
  */
 async function startReplyWatcher() {
   const config = imapConfig();
@@ -139,17 +149,31 @@ async function startReplyWatcher() {
   }
 
   for (;;) {
-    const client = new ImapFlow({ host: config.host, port: config.port, secure: config.secure, auth: config.auth, logger: false });
+    const client = new ImapFlow({
+      host: config.host, port: config.port, secure: config.secure, auth: config.auth,
+      logger: false, maxIdleTime: 5 * 60 * 1000
+    });
+    let processing = Promise.resolve();
+    const onExists = () => {
+      // Chain onto any in-flight run so overlapping 'exists' bursts don't
+      // race each other against the same lastUid setting.
+      processing = processing
+        .then(() => processNewMessages(client))
+        .catch((error) => writeLog({ recordId: '', type: 'REPLY', status: 'FAILURE', message: 'IMAP live update failed: ' + error.message }));
+    };
+
     try {
       await client.connect();
       const lock = await client.getMailboxLock('INBOX');
       try {
         await processNewMessages(client); // catch up on anything missed while disconnected
+        client.on('exists', onExists);
         for (;;) {
-          await client.idle(); // resolves when new mail arrives, the connection times out, or ~29min elapses
-          await processNewMessages(client);
+          await client.idle(); // parks the connection; restarts every maxIdleTime, or on server push
+          await processing; // make sure any in-flight 'exists' handler has finished before re-idling
         }
       } finally {
+        client.off('exists', onExists);
         lock.release();
       }
     } catch (error) {

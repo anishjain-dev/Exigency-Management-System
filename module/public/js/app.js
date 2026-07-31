@@ -143,6 +143,8 @@ async function loadExigencies() {
   if (department) params.set('department', department);
   if (resolved) params.set('resolved', resolved);
 
+  const openReplyId = document.querySelector('.reply-detail-row:not([hidden])')?.dataset.repliesFor;
+
   const rows = await api('/exigencies?' + params.toString());
   const tbody = document.querySelector('#exigenciesTable tbody');
   const emptyState = document.getElementById('exigenciesEmpty');
@@ -166,9 +168,8 @@ async function loadExigencies() {
       <td><input class="edit-closure" type="date" value="${r.closure_date ? r.closure_date.slice(0,10) : ''}" /></td>
       <td>
         ${r.reply_count > 0
-          ? `<button class="view-replies-btn" data-id="${r.id}" title="${(r.last_reply_text || '').replace(/"/g, '&quot;')}">
-               <span class="reply-snippet">${(r.last_reply_text || '').slice(0, 60)}${(r.last_reply_text || '').length > 60 ? '…' : ''}</span>
-               ${r.reply_count > 1 ? `<span class="reply-count-badge">+${r.reply_count - 1} more</span>` : ''}
+          ? `<button class="view-replies-btn" data-id="${r.id}" title="Click to view the reply">
+               <span class="reply-replied-label">Replied${r.reply_count > 1 ? ` (${r.reply_count})` : ''}</span>
              </button><div class="reply-timestamp">${fmtDateTime(r.last_reply_at)}</div>`
           : '<span class="status-pill pill-muted">No reply</span>'}
       </td>
@@ -218,6 +219,10 @@ async function loadExigencies() {
       detailRow.hidden = false;
     });
   });
+
+  if (openReplyId) {
+    document.querySelector(`.view-replies-btn[data-id="${openReplyId}"]`)?.click();
+  }
 }
 
 document.getElementById('refreshExigenciesBtn').addEventListener('click', loadExigencies);
@@ -430,3 +435,21 @@ async function loadLogs() {
 
 // Initial load.
 loadSchools().then(loadDashboard);
+
+/**
+ * Auto-refresh the active tab every 5s so new submissions/replies (the
+ * IMAP watcher can land a reply within seconds) show up without a manual
+ * refresh. Skipped while the user is actively editing a field in the
+ * exigencies table, so a background refresh never wipes out an in-progress
+ * edit.
+ */
+setInterval(() => {
+  const activeTab = document.querySelector('.tab-panel.active')?.id;
+  if (activeTab === 'tab-exigencies') {
+    const table = document.getElementById('exigenciesTable');
+    if (document.activeElement && table.contains(document.activeElement)) return;
+    loadExigencies();
+  } else if (activeTab === 'tab-dashboard') {
+    loadDashboard();
+  }
+}, 5000);
