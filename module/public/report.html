@@ -35,26 +35,51 @@
           <input type="date" id="dateOfIncident" name="dateOfIncident" required />
         </div>
         <div class="field">
-          <label for="location">Location</label>
-          <input type="text" id="location" name="location" placeholder="e.g. floor, bus, kitchen" />
+          <label for="location">Location <span class="req">*</span></label>
+          <p class="field-help">(Block, Floor, Room, Bus No., Area name, etc.)</p>
+          <input type="text" id="location" name="location" required placeholder="e.g. floor, bus, kitchen" />
         </div>
       </div>
 
-      <div class="row2">
-        <div class="field">
-          <label id="departmentLabel">Department <span class="req">*</span></label>
-          <div class="custom-select" id="departmentSelect">
-            <button type="button" class="custom-select-trigger" id="departmentTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="departmentLabel">Select department&hellip;</button>
-            <div class="custom-select-options" id="departmentOptions" role="listbox" hidden></div>
-          </div>
+      <div class="field">
+        <label id="departmentLabel">Choose the Department <span class="req">*</span></label>
+        <ul class="field-help">
+          <li>👉 <strong>Student Safety / Medical Emergency:</strong> 🚑 Sudden illness, fainting, asthma attack, seizures, allergic reactions, or need for urgent first aid beyond minor cuts/scrapes</li>
+          <li><strong>Transport Issue:</strong> 🚌 Bus/Van accident, unsafe bus driving, inappropriate bus staff behavior, missing student during transport, or student/staff injury while commuting</li>
+          <li><strong>Kitchen:</strong> 🍽️ Fire breakout, foreign body in food, unhygienic kitchen practices, expired food, or illness due to food</li>
+          <li><strong>Events:</strong> 🎉 Injury, mismanagement, missing student, or concern during on-campus or off-campus events</li>
+          <li><strong>Infrastructure/Safety Issues:</strong> 🏗️ Electrical faults, equipment malfunction, unsafe construction, or fire-related hazards</li>
+          <li><strong>Animal/Reptile Issue:</strong> Reptile or stray animal sighting on school campus</li>
+          <li><strong>Staff Safety & Conduct:</strong> Misconduct, verbal/physical conflict, or medical assistance needed for staff (Excluding POSH)</li>
+          <li><strong>Other / Not Listed:</strong> ✳️ Any incident not covered in the categories above</li>
+        </ul>
+        <div class="radio-group" id="departmentOptions" role="radiogroup" aria-labelledby="departmentLabel"></div>
+      </div>
+
+      <div class="field">
+        <label for="critical">Is this a Critical Issue? <span class="req">*</span></label>
+        <div class="field-help">
+          <p>Mark this issue as <strong>Critical</strong> if it involves or may lead to <strong>immediate danger, injury, or serious risk to student or staff safety</strong>, especially in cases involving <strong>children</strong>.</p>
+          <p>Critical issues require <strong>urgent attention</strong> from the leadership team.</p>
+          <p><strong>Examples:</strong></p>
+          <ul>
+            <li>🔴 Student injury, medical emergency, or visible trauma</li>
+            <li>🔴 Electrical hazards, fire, or significant infrastructure failure</li>
+            <li>🔴 Transport accidents, missing child, or serious staff misbehavior in transit</li>
+            <li>🔴 Foreign body in food that causes or could cause food poisoning</li>
+            <li>🔴 Physical fights, serious misconduct, or threat to life/safety</li>
+            <li>🔴 Animal sightings that pose a safety threat (e.g., snake, aggressive stray dog)</li>
+          </ul>
+          <p>Use <strong>Not Critical</strong> for issues that are concerning but do not pose an immediate risk, such as:</p>
+          <ul>
+            <li>🔵 Minor conflicts or misbehavior</li>
+            <li>🔵 Foreign body in food discovered before consumption and with no health effects</li>
+          </ul>
         </div>
-        <div class="field">
-          <label for="critical">Is this a Critical Issue? <span class="req">*</span></label>
-          <select id="critical" name="critical" required>
-            <option value="No">No</option>
-            <option value="Yes">Yes</option>
-          </select>
-        </div>
+        <select id="critical" name="critical" required>
+          <option value="No">No</option>
+          <option value="Yes">Yes</option>
+        </select>
       </div>
 
       <div class="field">
@@ -64,12 +89,13 @@
 
       <div class="field">
         <label for="attachments">Photos/videos/documents</label>
-        <input type="text" id="attachments" name="attachments" placeholder="Paste a Google Drive / shared link (optional)" />
+        <input type="file" id="attachments" name="attachments" multiple accept="image/*,video/*,.pdf,.doc,.docx" />
+        <p class="field-help">Up to 5 files, 10MB each.</p>
       </div>
 
       <div class="field">
-        <label for="immediateActions">What immediate actions were taken?</label>
-        <textarea id="immediateActions" name="immediateActions" rows="3"></textarea>
+        <label for="immediateActions">What immediate actions were taken? <span class="req">*</span></label>
+        <textarea id="immediateActions" name="immediateActions" rows="3" required></textarea>
       </div>
 
       <div class="row2">
@@ -81,14 +107,16 @@
           </select>
         </div>
         <div class="field" id="closureDateField">
-          <label for="closureDate">If NOT RESOLVED, closure date</label>
+          <label for="closureDate">If NOT RESOLVED, please specify the closure date.</label>
+          <p class="field-help">Department Head to ensure timely loop closure of this case.</p>
           <input type="date" id="closureDate" name="closureDate" />
         </div>
       </div>
 
       <div class="field">
-        <label for="suggestedChanges">Any suggested Policy, Training, Infra, Services or Process change required?</label>
-        <textarea id="suggestedChanges" name="suggestedChanges" rows="3"></textarea>
+        <label for="suggestedChanges">Any suggested Policy, Training, Infra, Services or Process change required? <span class="req">*</span></label>
+        <p class="field-help">Write NONE if not required.</p>
+        <textarea id="suggestedChanges" name="suggestedChanges" rows="3" required></textarea>
       </div>
 
       <button type="submit" id="submitBtn" class="btn-submit">Submit Report</button>

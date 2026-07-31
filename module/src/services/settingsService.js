@@ -56,6 +56,33 @@ function upsertDepartment(name) {
   db.prepare('INSERT OR IGNORE INTO departments (name) VALUES (?)').run(String(name).trim());
 }
 
+function countExigenciesForSchool(code) {
+  return db.prepare('SELECT COUNT(*) c FROM exigencies WHERE school_code = ?').get(code).c;
+}
+
+function countExigenciesForDepartment(name) {
+  return db.prepare('SELECT COUNT(*) c FROM exigencies WHERE department = ?').get(name).c;
+}
+
+function deleteSchool(code) {
+  db.prepare('DELETE FROM department_recipients WHERE school_code = ?').run(code);
+  db.prepare('DELETE FROM schools WHERE code = ?').run(code);
+}
+
+function deleteDepartment(name) {
+  db.prepare('DELETE FROM department_recipients WHERE department = ?').run(name);
+  db.prepare('DELETE FROM departments WHERE name = ?').run(name);
+}
+
+function renameDepartment(oldName, newName) {
+  const trimmedNew = String(newName).trim();
+  db.prepare('UPDATE OR IGNORE departments SET name = ? WHERE name = ?').run(trimmedNew, oldName);
+  db.prepare('DELETE FROM departments WHERE name = ?').run(oldName);
+  db.prepare('UPDATE OR IGNORE department_recipients SET department = ? WHERE department = ?').run(trimmedNew, oldName);
+  db.prepare('DELETE FROM department_recipients WHERE department = ?').run(oldName);
+  return trimmedNew;
+}
+
 /** Returns the exact school code as stored, matching case-insensitively. */
 function findSchoolCode(rawValue) {
   const value = String(rawValue || '').trim();
@@ -145,5 +172,10 @@ module.exports = {
   isKnownSchool,
   getDepartmentRecipients,
   getAllDepartmentRecipients,
+  countExigenciesForSchool,
+  countExigenciesForDepartment,
+  deleteSchool,
+  deleteDepartment,
+  renameDepartment,
   upsertDepartmentRecipients
 };

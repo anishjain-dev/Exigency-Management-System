@@ -8,7 +8,9 @@
 const express = require('express');
 const {
   getSchools, upsertSchool, getDepartments, upsertDepartment,
-  getAllDepartmentRecipients, upsertDepartmentRecipients
+  getAllDepartmentRecipients, upsertDepartmentRecipients,
+  countExigenciesForSchool, countExigenciesForDepartment,
+  deleteSchool, deleteDepartment, renameDepartment
 } = require('../services/settingsService');
 
 const router = express.Router();
@@ -26,6 +28,15 @@ router.post('/', (req, res) => {
   res.status(201).json({ code: normalized });
 });
 
+router.delete('/:code', (req, res) => {
+  const count = countExigenciesForSchool(req.params.code);
+  if (count > 0 && req.query.force !== 'true') {
+    return res.status(409).json({ error: 'has_exigencies', count });
+  }
+  deleteSchool(req.params.code);
+  res.json({ deleted: true });
+});
+
 router.get('/departments', (req, res) => {
   res.json(getDepartments());
 });
@@ -35,6 +46,22 @@ router.post('/departments', (req, res) => {
   if (!name) return res.status(400).json({ error: 'name is required' });
   upsertDepartment(name);
   res.status(201).json(getDepartments());
+});
+
+router.put('/departments/:name', (req, res) => {
+  const { name: newName } = req.body || {};
+  if (!newName) return res.status(400).json({ error: 'name is required' });
+  const saved = renameDepartment(req.params.name, newName);
+  res.json({ renamed: true, name: saved });
+});
+
+router.delete('/departments/:name', (req, res) => {
+  const count = countExigenciesForDepartment(req.params.name);
+  if (count > 0 && req.query.force !== 'true') {
+    return res.status(409).json({ error: 'has_exigencies', count });
+  }
+  deleteDepartment(req.params.name);
+  res.json({ deleted: true });
 });
 
 router.put('/:code/departments/:department', (req, res) => {

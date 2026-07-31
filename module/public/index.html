@@ -101,7 +101,7 @@
               <thead>
                 <tr>
                   <th>ID</th><th>School</th><th>Department</th><th>Critical</th><th>Issue</th>
-                  <th>Location</th><th>Immediate Actions</th><th>Resolved</th><th>Closure Date</th><th></th>
+                  <th>Location</th><th>Immediate Actions</th><th>Resolved</th><th>Closure Date</th><th>Replies</th><th></th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -116,16 +116,18 @@
               <div class="panel-header"><h2>Add School</h2></div>
               <form id="addSchoolForm" class="inline-form">
                 <input id="newSchoolCode" placeholder="Code (e.g. FSK)" required />
-                <input id="newSchoolName" placeholder="Full name / label matching Form dropdown" />
+                <input id="newSchoolName" placeholder="Name (e.g. Fountainhead School Kunkni)" />
                 <button type="submit" class="btn-primary">Add School</button>
               </form>
+              <div id="schoolsManageList" class="manage-list"></div>
             </div>
             <div class="panel">
-              <div class="panel-header"><h2>Add / Rename Department</h2></div>
+              <div class="panel-header"><h2>Add Department</h2></div>
               <form id="addDeptForm" class="inline-form">
-                <input id="newDeptName" placeholder="Department name (must match Form dropdown)" required />
+                <input id="newDeptName" placeholder="Name (e.g. Kitchen)" required />
                 <button type="submit" class="btn-primary">Add Department</button>
               </form>
+              <div id="departmentsManageList" class="manage-list"></div>
             </div>
           </div>
 

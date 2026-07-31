@@ -17,6 +17,7 @@ const { getSetting } = require('./src/services/settingsService');
 const { runDailyReminderJob } = require('./src/services/reminderService');
 const { sendCriticalErrorEmail } = require('./src/services/emailService');
 const { writeLog } = require('./src/services/logService');
+const { checkForReplies } = require('./src/services/replyService');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -59,6 +60,12 @@ app.listen(PORT, () => {
   // Settings; re-run scheduleReminderCron() after changing the hour via the
   // Settings UI + restarting the server to pick up the new time.
   scheduleReminderCron();
+
+  // Poll the inbox for replies to outgoing exigency emails every minute.
+  cron.schedule('* * * * *', () => {
+    checkForReplies().catch((error) => console.error('Reply check failed:', error));
+  });
+  checkForReplies().catch((error) => console.error('Reply check failed:', error));
 });
 
 let currentTask = null;

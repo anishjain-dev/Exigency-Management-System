@@ -4,3 +4,5 @@ data/*.db
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm
+public/uploads/*
+!public/uploads/.gitkeep

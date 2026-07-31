@@ -43,6 +43,14 @@ function fmtDate(iso) {
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ', ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
 const KPI_DEFS = [
   { key: 'total', label: 'Total' },
   { key: 'unresolved', label: 'Unresolved', accent: 'accent-critical' },
@@ -156,8 +164,14 @@ async function loadExigencies() {
         </select>
       </td>
       <td><input class="edit-closure" type="date" value="${r.closure_date ? r.closure_date.slice(0,10) : ''}" /></td>
+      <td>
+        ${r.reply_count > 0
+          ? `<button class="view-replies-btn" data-id="${r.id}">Replied (${r.reply_count})</button><div class="reply-timestamp">${fmtDateTime(r.last_reply_at)}</div>`
+          : '<span class="status-pill pill-muted">No reply</span>'}
+      </td>
       <td><button class="save-row-btn">Save</button></td>
     </tr>
+    <tr class="reply-detail-row" data-replies-for="${r.id}" hidden><td colspan="10"></td></tr>
   `).join('');
 
   document.querySelectorAll('.save-row-btn').forEach((btn) => {
@@ -173,6 +187,21 @@ async function loadExigencies() {
       loadExigencies();
     });
   });
+
+  document.querySelectorAll('.view-replies-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const detailRow = document.querySelector(`.reply-detail-row[data-replies-for="${btn.dataset.id}"]`);
+      if (!detailRow.hidden) { detailRow.hidden = true; return; }
+
+      const replies = await api(`/exigencies/${btn.dataset.id}/replies`);
+      detailRow.querySelector('td').innerHTML = '<div class="reply-thread">' + replies.map((rep) => `
+        <div class="reply-item">
+          <div class="reply-meta"><strong>${rep.from_email || 'Unknown sender'}</strong> — ${fmtDateTime(rep.received_at)}</div>
+          <div class="reply-body">${(rep.body_text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
+        </div>`).join('') + '</div>';
+      detailRow.hidden = false;
+    });
+  });
 }
 
 document.getElementById('refreshExigenciesBtn').addEventListener('click', loadExigencies);
@@ -180,9 +209,22 @@ document.getElementById('filterSchool').addEventListener('change', loadExigencie
 document.getElementById('filterDepartment').addEventListener('change', loadExigencies);
 document.getElementById('filterResolved').addEventListener('change', loadExigencies);
 
+const DEPARTMENT_ORDER = [
+  'Student Safety / Medical Emergency',
+  'Transport',
+  'Kitchen',
+  'Events',
+  'Infrastructure/Safety',
+  'Animal/Reptile Issue',
+  'Staff Safety & Conduct',
+  'Other'
+];
+
 async function loadSchools() {
   const schools = await api('/schools');
-  const departments = await api('/schools/departments');
+  const departments = (await api('/schools/departments')).slice().sort(
+    (a, b) => DEPARTMENT_ORDER.indexOf(a) - DEPARTMENT_ORDER.indexOf(b)
+  );
 
   const filterSchoolSelect = document.getElementById('filterSchool');
   filterSchoolSelect.innerHTML = '<option value="">All Schools</option>' +
@@ -192,9 +234,37 @@ async function loadSchools() {
   filterDeptSelect.innerHTML = '<option value="">All Departments</option>' +
     departments.map((d) => `<option value="${d}">${d}</option>`).join('');
 
+  document.getElementById('schoolsManageList').innerHTML = schools.length
+    ? '<ul class="manage-list-items">' + schools.map((s) => `
+        <li>
+          <span>${s.code}${s.name && s.name !== s.code ? ' — ' + s.name : ''}</span>
+          <span class="manage-list-actions">
+            <button class="edit-school-btn" data-code="${s.code}" data-name="${(s.name || '').replace(/"/g, '&quot;')}">Edit</button>
+            <button class="delete-school-btn danger" data-code="${s.code}">Delete</button>
+          </span>
+        </li>`).join('') + '</ul>'
+    : '';
+
+  document.getElementById('departmentsManageList').innerHTML = departments.length
+    ? '<ul class="manage-list-items">' + departments.map((d) => `
+        <li>
+          <span>${d}</span>
+          <span class="manage-list-actions">
+            <button class="rename-dept-btn" data-name="${d.replace(/"/g, '&quot;')}">Rename</button>
+            <button class="delete-dept-btn danger" data-name="${d.replace(/"/g, '&quot;')}">Delete</button>
+          </span>
+        </li>`).join('') + '</ul>'
+    : '';
+
   document.getElementById('schoolsList').innerHTML = schools.map((s) => `
     <div class="school-card">
-      <h3>${s.code}${s.name && s.name !== s.code ? ' — ' + s.name : ''}</h3>
+      <div class="school-card-header">
+        <h3>${s.code}${s.name && s.name !== s.code ? ' — ' + s.name : ''}</h3>
+        <div class="school-card-actions">
+          <button class="edit-school-btn" data-code="${s.code}" data-name="${(s.name || '').replace(/"/g, '&quot;')}">Edit</button>
+          <button class="delete-school-btn danger" data-code="${s.code}">Delete</button>
+        </div>
+      </div>
       <table class="data-table">
         <thead><tr><th>Department</th><th>To</th><th>CC</th><th></th></tr></thead>
         <tbody>
@@ -225,6 +295,65 @@ async function loadSchools() {
       setTimeout(() => { btn.textContent = 'Save'; }, 1500);
     });
   });
+
+  document.querySelectorAll('.edit-school-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const newName = prompt('Full name / label for ' + btn.dataset.code, btn.dataset.name);
+      if (newName === null) return;
+      await api('/schools', { method: 'POST', body: JSON.stringify({ code: btn.dataset.code, name: newName }) });
+      loadSchools();
+    });
+  });
+
+  document.querySelectorAll('.delete-school-btn').forEach((btn) => {
+    btn.addEventListener('click', () => deleteWithConfirm(
+      `/schools/${encodeURIComponent(btn.dataset.code)}`,
+      `school "${btn.dataset.code}" (and its recipient rows)`
+    ));
+  });
+
+  document.querySelectorAll('.rename-dept-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const newName = prompt('Rename department', btn.dataset.name);
+      if (!newName || newName === btn.dataset.name) return;
+      await api(`/schools/departments/${encodeURIComponent(btn.dataset.name)}`, {
+        method: 'PUT', body: JSON.stringify({ name: newName })
+      });
+      loadSchools();
+    });
+  });
+
+  document.querySelectorAll('.delete-dept-btn').forEach((btn) => {
+    btn.addEventListener('click', () => deleteWithConfirm(
+      `/schools/departments/${encodeURIComponent(btn.dataset.name)}`,
+      `department "${btn.dataset.name}" (across all schools)`
+    ));
+  });
+}
+
+/**
+ * Deletes a school or department. If exigencies still reference it, the
+ * server responds 409 with a record count — re-confirm with that count
+ * before retrying with ?force=true (deletes anyway, leaves historical
+ * exigency records with a dangling label, doesn't touch them).
+ */
+async function deleteWithConfirm(path, label) {
+  if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+  let res = await fetch('/api' + path, { method: 'DELETE' });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    const proceed = confirm(
+      `${body.count} exigency record(s) still reference this ${label}. ` +
+      `They will be kept as-is, but recipient routing for it will be removed. Continue?`
+    );
+    if (!proceed) return;
+    res = await fetch('/api' + path + '?force=true', { method: 'DELETE' });
+  }
+  if (!res.ok) {
+    alert('Delete failed: ' + res.statusText);
+    return;
+  }
+  loadSchools();
 }
 
 document.getElementById('addSchoolForm').addEventListener('submit', async (e) => {

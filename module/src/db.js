@@ -87,6 +87,18 @@ db.exec(`
     status TEXT,
     message TEXT
   );
+
+  -- Inbound replies to notification/reminder emails, matched back to their
+  -- exigency via the [EXG###] tag embedded in the outgoing email subject.
+  CREATE TABLE IF NOT EXISTS email_replies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_id TEXT NOT NULL,
+    from_email TEXT,
+    subject TEXT,
+    body_text TEXT,
+    received_at TEXT NOT NULL,
+    message_id TEXT UNIQUE
+  );
 `);
 
 /** Seeds sane defaults + real school/department/recipient data on first run only. */
@@ -112,7 +124,10 @@ function seedDefaults() {
     ReminderDelayDays: '0',
     CriticalColor: '#EA4335',
     ResolvedColor: '#34A853',
-    UnresolvedColor: '#FBBC04'
+    UnresolvedColor: '#FBBC04',
+    // Highest IMAP UID already scanned for replies — the reply watcher only
+    // fetches messages newer than this on each poll.
+    ImapLastUid: '0'
   };
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   Object.entries(defaults).forEach(([key, value]) => insertSetting.run(key, value));

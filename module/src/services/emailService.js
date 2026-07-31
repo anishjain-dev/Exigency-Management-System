@@ -108,14 +108,7 @@ function brandMasthead(title, subtitle) {
 
 /** Shared footer band, closes out every outgoing email. */
 function brandFooter() {
-  return `
-  <tr>
-    <td colspan="2" style="background:${BRAND.tintBlue};padding:14px 26px;border-top:1px solid #dbe6f0;">
-      <p style="margin:0;font-family:${BRAND.bodyFont};font-size:11px;color:${BRAND.sub};">
-        Fountainhead &middot; Exigency Management System &mdash; automated notification, please do not reply.
-      </p>
-    </td>
-  </tr>`;
+  return '';
 }
 
 /**
@@ -233,7 +226,7 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `Reminder: Exigency - ${record.school_raw || record.school_code} - ${record.department}`,
+      subject: `Reminder: Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
       html: buildHtmlEmail(record, appUrl),
       attachments: [LOGO_ATTACHMENT]
     });
@@ -318,7 +311,7 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `${criticalPrefix}Exigency - ${record.school_raw || record.school_code} - ${record.department}`,
+      subject: `${criticalPrefix}Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
       html,
       attachments: [LOGO_ATTACHMENT]
     });

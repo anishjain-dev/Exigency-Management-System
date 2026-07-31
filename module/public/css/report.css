@@ -90,6 +90,20 @@ label {
 }
 .req { color: var(--red); }
 
+.field-help {
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--sub);
+  line-height: 1.5;
+  margin: 0;
+}
+.field-help p { margin: 0 0 8px; }
+.field-help p:last-child { margin-bottom: 0; }
+.field-help ul { margin: 0 0 8px; padding-left: 18px; }
+.field-help ul:last-child { margin-bottom: 0; }
+.field-help li { margin-bottom: 4px; }
+.field-help strong { font-style: normal; color: var(--ink); }
+
 input, select, textarea {
   font-family: 'Nunito', 'Segoe UI', Arial, sans-serif;
   font-size: 14px;
@@ -155,6 +169,12 @@ input, select, textarea {
 .custom-select-option.selected { background: var(--blue); color: #ffffff; }
 
 select { cursor: pointer; }
+
+/* ---------- Radio group (Department) ---------- */
+.radio-group { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.radio-option { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink); cursor: pointer; }
+.radio-option input[type="radio"] { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: var(--blue); }
+.radio-group.invalid .radio-option { color: var(--red); }
 
 input:focus, select:focus, textarea:focus {
   outline: none;

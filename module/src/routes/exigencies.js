@@ -14,7 +14,11 @@ const router = express.Router();
 
 router.get('/', (req, res) => {
   const { school, department, resolved, critical } = req.query;
-  let sql = 'SELECT * FROM exigencies WHERE 1=1';
+  let sql = `
+    SELECT e.*,
+      (SELECT COUNT(*) FROM email_replies r WHERE r.record_id = e.id) AS reply_count,
+      (SELECT MAX(received_at) FROM email_replies r WHERE r.record_id = e.id) AS last_reply_at
+    FROM exigencies e WHERE 1=1`;
   const params = [];
   if (school) { sql += ' AND school_code = ?'; params.push(school); }
   if (department) { sql += ' AND department = ?'; params.push(department); }
@@ -28,6 +32,11 @@ router.get('/:id', (req, res) => {
   const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id);
   if (!record) return res.status(404).json({ error: 'Not found' });
   res.json(record);
+});
+
+router.get('/:id/replies', (req, res) => {
+  const replies = db.prepare('SELECT * FROM email_replies WHERE record_id = ? ORDER BY received_at ASC').all(req.params.id);
+  res.json(replies);
 });
 
 /**
