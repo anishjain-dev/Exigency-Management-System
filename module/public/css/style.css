@@ -132,7 +132,7 @@ body {
   padding: 20px 28px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
   position: sticky;
@@ -354,12 +354,6 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 
 .row-actions { display: flex; gap: 6px; white-space: nowrap; }
 .row-actions button { margin: 0; }
-.row-actions button.save-row-btn, .row-actions button.remind-now-btn {
-  background: var(--danger); color: #fff; border-color: var(--danger);
-}
-.row-actions button.save-row-btn:hover, .row-actions button.remind-now-btn:hover {
-  background: #9d2229; border-color: #9d2229;
-}
 .replies-cell { padding-right: 24px; }
 
 .view-replies-btn {
