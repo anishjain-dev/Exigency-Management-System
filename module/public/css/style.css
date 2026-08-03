@@ -304,7 +304,7 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 .school-recipients-table th:nth-child(2), .school-recipients-table td:nth-child(2),
 .school-recipients-table th:nth-child(3), .school-recipients-table td:nth-child(3) { width: 33%; }
 .school-recipients-table th:nth-child(4), .school-recipients-table td:nth-child(4) { width: 70px; text-align: center; }
-.school-recipients-table th:nth-child(2), .school-recipients-table th:nth-child(3) { text-align: center; }
+.school-recipients-table th:nth-child(2), .school-recipients-table th:nth-child(3) { text-align: left; }
 
 /* ---------- Toolbar / forms / buttons ---------- */
 
