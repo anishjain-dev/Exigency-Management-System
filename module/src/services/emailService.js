@@ -107,7 +107,7 @@ function brandMasthead(title, subtitle) {
   return `
   <tr>
     <td colspan="2" style="background:#ffffff;padding:22px 26px 18px;">
-      <img src="cid:${LOGO_CID}" alt="Fountainhead" height="28" style="height:28px;width:auto;display:block;margin-bottom:14px;" />
+      <img src="cid:${LOGO_CID}" alt="Fountainhead" height="48" style="height:48px;width:auto;display:block;margin-bottom:14px;" />
       <div style="font-family:${BRAND.headFont};color:${BRAND.blue};font-size:20px;font-weight:800;">${escapeHtml(title)}</div>
       ${subtitle ? `<div style="font-family:${BRAND.bodyFont};color:${BRAND.sub};font-size:13px;margin-top:3px;">${subtitle}</div>` : ''}
     </td>
@@ -243,7 +243,7 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `Reminder: Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
+      subject: `Reminder : Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
       html: buildHtmlEmail(record, appUrl, customMessage),
       attachments: [LOGO_ATTACHMENT]
     });
@@ -368,7 +368,7 @@ async function sendStatusUpdateEmail(record, toEmails, ccEmails, appUrl) {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `Update: Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
+      subject: `Update : Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
       html: buildHtmlEmail(record, appUrl),
       attachments: [LOGO_ATTACHMENT]
     });

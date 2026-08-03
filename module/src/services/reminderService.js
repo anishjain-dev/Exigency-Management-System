@@ -89,14 +89,17 @@ async function runDailyReminderJob(appUrl) {
 
 /**
  * Sends the reminder email right now for an explicitly-picked set of
- * records (dashboard checkboxes), with an optional shared custom message.
+ * records (dashboard checkboxes). No ad-hoc message input here — this
+ * always uses the standing Settings!ReminderMessage, same text every
+ * time, exactly like the daily job. (Per-record "Reminder" button is the
+ * one that supports a custom one-off message.)
  * Unlike runDailyReminderJob, this ignores the resolved/closure-date/
  * delay/already-reminded-today gating — an explicit manual selection
  * always sends — but still stamps last_reminder_date/reminder_count so
  * the daily cron doesn't also re-send the same one right after.
  */
-async function sendSelectedReminders(ids, message, appUrl) {
-  const customMessage = String(message || '').trim();
+async function sendSelectedReminders(ids, appUrl) {
+  const customMessage = String(getSetting('ReminderMessage', '') || '').trim();
   let sent = 0;
   let failed = 0;
 

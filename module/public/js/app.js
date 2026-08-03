@@ -126,14 +126,12 @@ document.getElementById('sendSelectedReminderBtn').addEventListener('click', asy
     alert('Tick at least one exigency first.');
     return;
   }
-  const message = prompt(`Add a message to include in the reminder email for these ${ids.length} exigenc${ids.length > 1 ? 'ies' : 'y'} (optional, leave blank for none):`);
-  if (message === null) return; // cancelled
   if (!confirm(`Send the reminder email right now for ${ids.length} selected exigenc${ids.length > 1 ? 'ies' : 'y'}?`)) return;
 
   const btn = document.getElementById('sendSelectedReminderBtn');
   btn.disabled = true;
   try {
-    const result = await api('/reminders/send-selected', { method: 'POST', body: JSON.stringify({ ids, message }) });
+    const result = await api('/reminders/send-selected', { method: 'POST', body: JSON.stringify({ ids }) });
     alert(`Sent: ${result.sent}, failed: ${result.failed}.`);
   } finally {
     btn.disabled = false;

@@ -49,7 +49,7 @@ app.post('/api/reminders/send-selected', async (req, res) => {
   const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(Boolean) : [];
   if (ids.length === 0) return res.status(400).json({ error: 'No exigency ids provided.' });
   try {
-    const result = await sendSelectedReminders(ids, req.body?.message, APP_URL);
+    const result = await sendSelectedReminders(ids, APP_URL);
     res.json(result);
   } catch (error) {
     console.error(error);
