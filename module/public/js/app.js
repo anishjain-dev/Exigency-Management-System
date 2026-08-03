@@ -166,7 +166,7 @@ async function loadExigencies() {
         </select>
       </td>
       <td><input class="edit-closure" type="date" value="${r.closure_date ? r.closure_date.slice(0,10) : ''}" /></td>
-      <td>
+      <td class="replies-cell">
         ${r.reply_count > 0
           ? `<button class="view-replies-btn" data-id="${r.id}" title="Click to view the reply">
                <span class="reply-replied-label">Replied${r.reply_count > 1 ? ` (${r.reply_count})` : ''}</span>
@@ -177,7 +177,7 @@ async function loadExigencies() {
       <td>
         <div class="row-actions">
           <button class="save-row-btn">Save</button>
-          ${r.resolved !== 'Yes' ? `<button class="remind-now-btn" data-id="${r.id}" title="Send this exigency's reminder email right now">Remind</button>` : ''}
+          ${r.resolved !== 'Yes' ? `<button class="remind-now-btn" data-id="${r.id}" title="Send this exigency's reminder email right now, with an optional custom message">Reminder</button>` : ''}
         </div>
       </td>
     </tr>
@@ -213,10 +213,11 @@ async function loadExigencies() {
   document.querySelectorAll('.remind-now-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
-      if (!confirm(`Send the reminder email for ${id} right now to its department recipients?`)) return;
+      const message = prompt(`Add a message to include in the reminder email for ${id} (optional, leave blank for none):`);
+      if (message === null) return; // cancelled
       btn.disabled = true;
       try {
-        const result = await api(`/exigencies/${id}/remind-now`, { method: 'POST' });
+        const result = await api(`/exigencies/${id}/remind-now`, { method: 'POST', body: JSON.stringify({ message }) });
         alert(result.sent ? 'Reminder sent.' : 'Could not send the reminder — check Logs for details.');
       } finally {
         loadExigencies();

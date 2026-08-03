@@ -164,7 +164,7 @@ function applyRecipientOverride(to, cc) {
   return { to: forceEmails, cc: [], overridden: true, originalTo, originalCc };
 }
 
-function buildHtmlEmail(record, appUrl) {
+function buildHtmlEmail(record, appUrl, customMessage) {
   const resolved = record.resolved || 'No';
   const pendingSince = daysBetween(record.created_at);
 
@@ -192,6 +192,7 @@ function buildHtmlEmail(record, appUrl) {
           <p style="margin:0 0 8px 0;font-family:${BRAND.bodyFont};font-size:14.5px;color:${BRAND.ink};">
             The exigency below is <strong>unresolved</strong> and requires your action.
           </p>
+          ${customMessage ? `<p style="margin:0 0 8px 0;padding:10px 14px;background:${BRAND.tintBlue};border-left:3px solid ${BRAND.blue};font-family:${BRAND.bodyFont};font-size:14px;color:${BRAND.ink};">${escapeHtml(customMessage)}</p>` : ''}
         </td></tr>
         <tr><td colspan="2" style="padding:0 12px 24px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
@@ -215,7 +216,7 @@ function isMailingEnabled() {
   return String(getAllSettings().MailingEnabled ?? 'true').trim().toLowerCase() !== 'false';
 }
 
-async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUrl) {
+async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUrl, customMessage) {
   if (!isMailingEnabled()) {
     writeLog({ recordId: record.id, type: reminderType, status: 'SKIPPED', message: 'Mailing is disabled (Settings!MailingEnabled=false).' });
     return false;
@@ -239,7 +240,7 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
       to: recipients.join(','),
       cc: cc.join(','),
       subject: `Reminder: Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
-      html: buildHtmlEmail(record, appUrl),
+      html: buildHtmlEmail(record, appUrl, customMessage),
       attachments: [LOGO_ATTACHMENT]
     });
     writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'SUCCESS', message: 'Reminder email sent.' + overrideNote });

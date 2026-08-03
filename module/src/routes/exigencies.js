@@ -119,7 +119,8 @@ router.post('/:id/remind-now', async (req, res) => {
   const cc = recipients.cc.filter(isValidEmail);
 
   const appUrl = `${req.protocol}://${req.get('host')}`;
-  const sent = await sendReminderEmail(record, to, cc, 'MANUAL_REMINDER', appUrl);
+  const customMessage = (req.body && req.body.message) ? String(req.body.message).trim() : '';
+  const sent = await sendReminderEmail(record, to, cc, 'MANUAL_REMINDER', appUrl, customMessage);
 
   if (sent) {
     db.prepare('UPDATE exigencies SET last_reminder_date = ?, reminder_count = reminder_count + 1 WHERE id = ?')
