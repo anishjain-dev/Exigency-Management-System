@@ -222,7 +222,7 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 
 .bar-list { display: flex; flex-direction: column; gap: 10px; }
 
-.bar-row { display: grid; grid-template-columns: 130px 1fr 34px; align-items: center; gap: 10px; font-size: 12.5px; }
+.bar-row { display: grid; grid-template-columns: minmax(90px, max-content) 1fr 34px; align-items: center; gap: 10px; font-size: 12.5px; }
 
 .bar-row .bar-label { color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
