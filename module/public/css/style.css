@@ -378,6 +378,15 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 
 .row-actions { display: flex; gap: 6px; white-space: nowrap; }
 .row-actions button { margin: 0; }
+
+#exigenciesTable td:last-child, #exigenciesTable th:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--card-bg);
+  box-shadow: -2px 0 4px rgba(0,0,0,0.06);
+}
+#exigenciesTable th:last-child { background: var(--primary); z-index: 3; }
+#exigenciesTable tbody tr:nth-child(even) td:last-child { background: #eef4fa; }
 .replies-cell { padding-right: 24px; }
 
 .view-replies-btn {
@@ -479,6 +488,7 @@ button.danger:hover { background: var(--danger); color: #fff; }
   .bar-track { background: #262e3a; }
   .data-table tbody tr:nth-child(even) { background: #1d2836; }
   .data-table tbody tr:hover { background: #223349; }
+  #exigenciesTable tbody tr:nth-child(even) td:last-child { background: #1d2836; }
   .kpi-card { background: #1a2836; }
   .kpi-card.accent-critical { background: #2e1c1d; }
   .kpi-card.accent-success { background: #1a2836; }
