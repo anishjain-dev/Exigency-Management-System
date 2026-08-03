@@ -171,9 +171,9 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 .kpi-card {
@@ -181,12 +181,12 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   border: 1px solid var(--border);
   border-top: 3px solid var(--primary);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 12px;
   position: relative;
 }
 
-.kpi-card .value { font-family: var(--head-font); font-size: 30px; font-weight: 800; line-height: 1; color: var(--primary); font-variant-numeric: tabular-nums; }
-.kpi-card .label { font-size: 12px; color: var(--muted); margin-top: 8px; font-weight: 600; }
+.kpi-card .value { font-family: var(--head-font); font-size: 22px; font-weight: 800; line-height: 1; color: var(--primary); font-variant-numeric: tabular-nums; }
+.kpi-card .label { font-size: 11px; color: var(--muted); margin-top: 5px; font-weight: 600; }
 
 /* Unresolved / Overdue — urgent, red */
 .kpi-card.accent-critical { background: #fbebea; border-top-color: var(--danger); }
