@@ -140,21 +140,6 @@ document.getElementById('sendSelectedReminderBtn').addEventListener('click', asy
   }
 });
 
-document.getElementById('runReminderBtn').addEventListener('click', async () => {
-  const el = document.getElementById('reminderResult');
-  if (!confirm('This will send real reminder emails to recipients now. Continue?')) {
-    return;
-  }
-  el.textContent = 'Running...';
-  try {
-    const result = await api('/reminders/run-now', { method: 'POST' });
-    el.textContent = `Sent: ${result.sent}, skipped: ${result.skipped}`;
-    loadDashboard();
-  } catch (e) {
-    el.textContent = 'Error: ' + e.message;
-  }
-});
-
 async function loadExigencies() {
   const school = document.getElementById('filterSchool').value;
   const department = document.getElementById('filterDepartment').value;
