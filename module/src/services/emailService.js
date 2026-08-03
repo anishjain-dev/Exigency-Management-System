@@ -144,9 +144,10 @@ function brandFieldTable(rows) {
 
 /**
  * If Settings!ForceRecipientEmail is set (comma-separated, one or more
- * addresses), ALL outgoing mail (reminder AND new-submission notification)
- * is redirected to ONLY those addresses — the real department/CC recipients
- * are dropped entirely and do not receive anything.
+ * addresses), those addresses are ADDED to every outgoing mail (reminder
+ * AND new-submission notification) alongside the real department/CC
+ * recipients — everyone still gets it, this just guarantees the forced
+ * addresses are also copied in.
  * @param {Array<string>} to
  * @param {Array<string>} cc
  * @return {{to: Array<string>, cc: Array<string>, overridden: boolean, originalTo: Array<string>, originalCc: Array<string>}}
@@ -161,7 +162,8 @@ function applyRecipientOverride(to, cc) {
   if (forceEmails.length === 0) {
     return { to: originalTo, cc: originalCc, overridden: false, originalTo, originalCc };
   }
-  return { to: forceEmails, cc: [], overridden: true, originalTo, originalCc };
+  const mergedTo = Array.from(new Set([...originalTo, ...forceEmails]));
+  return { to: mergedTo, cc: originalCc, overridden: true, originalTo, originalCc };
 }
 
 function buildHtmlEmail(record, appUrl, customMessage) {
