@@ -332,7 +332,7 @@ async function loadSchools() {
           <button class="delete-school-btn danger" data-code="${s.code}">Delete</button>
         </div>
       </div>
-      <table class="data-table">
+      <table class="data-table school-recipients-table">
         <thead><tr><th>Department</th><th>To</th><th>CC</th><th></th></tr></thead>
         <tbody>
           ${departments.map((dept) => {

@@ -187,10 +187,12 @@ function buildHtmlEmail(record, appUrl, customMessage) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa;padding:24px 0;">
     <tr><td align="center">
       <table role="presentation" width="100%" style="max-width:620px;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
-        ${brandMasthead('Action Required', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`)}
+        ${brandMasthead(resolved === 'Yes' ? 'Status Update' : 'Action Required', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`)}
         <tr><td colspan="2" style="padding:16px 26px 4px;">
           <p style="margin:0 0 8px 0;font-family:${BRAND.bodyFont};font-size:14.5px;color:${BRAND.ink};">
-            The exigency below is <strong>unresolved</strong> and requires your action.
+            ${resolved === 'Yes'
+              ? 'The exigency below has been marked <strong>resolved</strong>.'
+              : 'The exigency below is <strong>unresolved</strong> and requires your action.'}
           </p>
           ${customMessage ? `<p style="margin:0 0 8px 0;padding:10px 14px;background:${BRAND.tintBlue};border-left:3px solid ${BRAND.blue};font-family:${BRAND.bodyFont};font-size:14px;color:${BRAND.ink};">${escapeHtml(customMessage)}</p>` : ''}
         </td></tr>
