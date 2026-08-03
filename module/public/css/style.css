@@ -258,6 +258,12 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   vertical-align: middle;
 }
 
+#exigenciesTable th:first-child, #exigenciesTable td:first-child {
+  width: 36px;
+  padding-right: 0;
+  text-align: center;
+}
+
 .data-table th {
   background: var(--primary);
   color: #ffffff;
@@ -287,7 +293,7 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 
 /* ---------- Toolbar / forms / buttons ---------- */
 
-.toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 
 .toolbar select, .inline-form input {
   padding: 9px 12px;
@@ -295,16 +301,17 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   border: 1px solid var(--border);
   font-size: 13px;
   background: #fff;
+  max-width: 200px;
 }
 
 .btn-primary, .btn-secondary {
-  padding: 10px 18px;
+  padding: 9px 18px;
   border-radius: 8px;
   cursor: pointer;
   font-family: var(--head-font);
   font-size: 13px;
   font-weight: 700;
-  border: none;
+  border: 1px solid transparent;
 }
 
 .btn-primary { background: var(--danger); color: #fff; }
