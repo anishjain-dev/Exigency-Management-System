@@ -285,6 +285,12 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 
 .empty-state { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; }
 
+#recentExigenciesTable { table-layout: fixed; min-width: 0; }
+#recentExigenciesTable th:nth-child(1), #recentExigenciesTable td:nth-child(1) { width: 18%; }
+#recentExigenciesTable th:nth-child(2), #recentExigenciesTable td:nth-child(2) { width: 16%; }
+#recentExigenciesTable th:nth-child(3), #recentExigenciesTable td:nth-child(3) { width: 36%; }
+#recentExigenciesTable th:nth-child(4), #recentExigenciesTable td:nth-child(4) { width: 30%; text-align: center; }
+
 /* ---------- Toolbar / forms / buttons ---------- */
 
 .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
