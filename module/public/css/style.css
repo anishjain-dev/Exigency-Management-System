@@ -165,7 +165,7 @@ main { padding: 14px 20px; max-width: 1440px; width: 100%; margin: 0 auto; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 
-h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0; color: var(--text); }
+h2 { font-family: var(--head-font); font-size: 12.5px; font-weight: 700; margin: 0; color: var(--text); }
 
 /* ---------- KPI cards ---------- */
 
@@ -214,11 +214,11 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
 }
 
-.panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
 
 .bar-list { display: flex; flex-direction: column; gap: 10px; }
 
