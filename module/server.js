@@ -2,9 +2,9 @@
  * server.js
  *
  * Entry point for the standalone Exigency Management module. Runs entirely
- * on localhost with its own SQLite database — no Google Sheets involved.
- * Google Form submissions arrive via the /api/webhook/form-submit endpoint,
- * called by the Apps Script webhook (see ExigencyModuleWebhook.gs).
+ * on localhost with its own SQLite database — no Google Sheets or Google
+ * Form involved. Submissions come in through the module's own built-in
+ * form at /report.html (see routes/report.js).
  */
 
 const path = require('path');
@@ -27,7 +27,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/api/webhook', require('./src/routes/webhook'));
 app.use('/api/report', require('./src/routes/report'));
 app.use('/api/exigencies', require('./src/routes/exigencies'));
 app.use('/api/schools', require('./src/routes/schools'));
