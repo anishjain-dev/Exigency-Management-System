@@ -218,7 +218,7 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   margin-bottom: 8px;
 }
 
-.panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 
 .bar-list { display: flex; flex-direction: column; gap: 10px; }
 
@@ -226,7 +226,7 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 
 .bar-row .bar-label { color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.bar-track { background: #eef1f6; border-radius: 6px; height: 10px; overflow: hidden; position: relative; }
+.bar-track { background: #eef1f6; border-radius: 6px; height: 8px; overflow: hidden; position: relative; }
 
 .bar-fill-unresolved { background: var(--warning); height: 100%; float: left; }
 .bar-fill-resolved { background: var(--success); height: 100%; float: left; }
