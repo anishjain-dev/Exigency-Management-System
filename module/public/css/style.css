@@ -158,7 +158,7 @@ body {
 
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
 
-main { padding: 24px 28px; max-width: 1440px; width: 100%; margin: 0 auto; }
+main { padding: 14px 20px; max-width: 1440px; width: 100%; margin: 0 auto; }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; animation: fadeIn 0.15s ease; }
@@ -205,17 +205,17 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 .panel-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 10px;
 }
 
-.panel-grid.two-col { margin-bottom: 20px; }
+.panel-grid.two-col { margin-bottom: 10px; }
 
 .panel {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
 }
 
 .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -252,7 +252,7 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 }
 
 .data-table th, .data-table td {
-  padding: 11px 14px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: middle;
@@ -401,8 +401,8 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
 }
 
 .school-card h3 { margin: 0; font-family: var(--head-font); font-size: 14px; font-weight: 700; }
