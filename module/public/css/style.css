@@ -352,6 +352,8 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 .pill-unresolved { background: var(--warning); color: #5c3d00; }
 .pill-muted { background: #e1e4e9; color: var(--muted); }
 
+.remind-now-btn { margin-left: 6px; }
+
 .view-replies-btn {
   display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
   max-width: 220px;

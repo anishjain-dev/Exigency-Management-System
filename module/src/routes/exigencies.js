@@ -9,7 +9,7 @@ const db = require('../db');
 const { writeLog } = require('../services/logService');
 const { createUniqueId } = require('../services/idService');
 const { resolveSchoolCode, resolveDepartment, getDepartmentRecipients } = require('../services/settingsService');
-const { sendStatusUpdateEmail } = require('../services/emailService');
+const { sendStatusUpdateEmail, sendReminderEmail } = require('../services/emailService');
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
@@ -100,6 +100,31 @@ router.post('/:id/notify-status', async (req, res) => {
 
   const appUrl = `${req.protocol}://${req.get('host')}`;
   const sent = await sendStatusUpdateEmail(record, to, cc, appUrl);
+
+  res.json({ sent });
+});
+
+/**
+ * Sends this one record's reminder email right now, to its real department
+ * recipients (same routing/override rules as the daily job), and stamps
+ * last_reminder_date/reminder_count exactly like runDailyReminderJob would —
+ * so the daily cron doesn't double-send it later today.
+ */
+router.post('/:id/remind-now', async (req, res) => {
+  const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id);
+  if (!record) return res.status(404).json({ error: 'Not found' });
+
+  const recipients = getDepartmentRecipients(record.school_code, record.department);
+  const to = recipients.to.filter(isValidEmail);
+  const cc = recipients.cc.filter(isValidEmail);
+
+  const appUrl = `${req.protocol}://${req.get('host')}`;
+  const sent = await sendReminderEmail(record, to, cc, 'MANUAL_REMINDER', appUrl);
+
+  if (sent) {
+    db.prepare('UPDATE exigencies SET last_reminder_date = ?, reminder_count = reminder_count + 1 WHERE id = ?')
+      .run(new Date().toISOString(), req.params.id);
+  }
 
   res.json({ sent });
 });

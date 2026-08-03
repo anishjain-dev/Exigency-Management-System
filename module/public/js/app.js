@@ -174,7 +174,10 @@ async function loadExigencies() {
              </button>`
           : '<span class="status-pill pill-muted">No reply</span>'}
       </td>
-      <td><button class="save-row-btn">Save</button></td>
+      <td>
+        <button class="save-row-btn">Save</button>
+        ${r.resolved !== 'Yes' ? `<button class="remind-now-btn" data-id="${r.id}" title="Send this exigency's reminder email right now">Remind</button>` : ''}
+      </td>
     </tr>
     <tr class="reply-detail-row" data-replies-for="${r.id}" hidden><td colspan="11"></td></tr>
   `).join('');
@@ -202,6 +205,20 @@ async function loadExigencies() {
       }
 
       loadExigencies();
+    });
+  });
+
+  document.querySelectorAll('.remind-now-btn').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.dataset.id;
+      if (!confirm(`Send the reminder email for ${id} right now to its department recipients?`)) return;
+      btn.disabled = true;
+      try {
+        const result = await api(`/exigencies/${id}/remind-now`, { method: 'POST' });
+        alert(result.sent ? 'Reminder sent.' : 'Could not send the reminder — check Logs for details.');
+      } finally {
+        loadExigencies();
+      }
     });
   });
 
