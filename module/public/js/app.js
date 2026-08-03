@@ -175,8 +175,10 @@ async function loadExigencies() {
           : '<span class="status-pill pill-muted">No reply</span>'}
       </td>
       <td>
-        <button class="save-row-btn">Save</button>
-        ${r.resolved !== 'Yes' ? `<button class="remind-now-btn" data-id="${r.id}" title="Send this exigency's reminder email right now">Remind</button>` : ''}
+        <div class="row-actions">
+          <button class="save-row-btn">Save</button>
+          ${r.resolved !== 'Yes' ? `<button class="remind-now-btn" data-id="${r.id}" title="Send this exigency's reminder email right now">Remind</button>` : ''}
+        </div>
       </td>
     </tr>
     <tr class="reply-detail-row" data-replies-for="${r.id}" hidden><td colspan="11"></td></tr>
