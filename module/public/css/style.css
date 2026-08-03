@@ -295,13 +295,16 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 #recentExigenciesTable th:nth-child(1), #recentExigenciesTable td:nth-child(1) { width: 18%; }
 #recentExigenciesTable th:nth-child(2), #recentExigenciesTable td:nth-child(2) { width: 16%; }
 #recentExigenciesTable th:nth-child(3), #recentExigenciesTable td:nth-child(3) { width: 36%; }
-#recentExigenciesTable th:nth-child(4), #recentExigenciesTable td:nth-child(4) { width: 30%; }
+#recentExigenciesTable th:nth-child(4), #recentExigenciesTable td:nth-child(4) { width: 30%; text-align: center; }
+
+#exigenciesTable th:nth-child(5), #exigenciesTable td:nth-child(5) { text-align: center; }
 
 .school-recipients-table { table-layout: fixed; min-width: 0; }
 .school-recipients-table th:nth-child(1), .school-recipients-table td:nth-child(1) { width: 26%; }
 .school-recipients-table th:nth-child(2), .school-recipients-table td:nth-child(2),
 .school-recipients-table th:nth-child(3), .school-recipients-table td:nth-child(3) { width: 33%; }
-.school-recipients-table th:nth-child(4), .school-recipients-table td:nth-child(4) { width: 70px; }
+.school-recipients-table th:nth-child(4), .school-recipients-table td:nth-child(4) { width: 70px; text-align: center; }
+.school-recipients-table th:nth-child(2), .school-recipients-table th:nth-child(3) { text-align: center; }
 
 /* ---------- Toolbar / forms / buttons ---------- */
 
@@ -313,8 +316,10 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   border: 1px solid var(--border);
   font-size: 13px;
   background: #fff;
-  max-width: 200px;
 }
+
+.toolbar select { max-width: 200px; }
+.inline-form input { flex: 1; min-width: 140px; }
 
 .btn-primary, .btn-secondary {
   padding: 9px 18px;

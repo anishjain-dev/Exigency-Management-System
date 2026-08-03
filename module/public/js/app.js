@@ -20,6 +20,7 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     document.getElementById('pageTitle').textContent = TAB_TITLES[btn.dataset.tab] || '';
+    document.getElementById('sendSelectedReminderBtn').hidden = btn.dataset.tab !== 'exigencies';
     if (btn.dataset.tab === 'dashboard') loadDashboard();
     if (btn.dataset.tab === 'exigencies') loadExigencies();
     if (btn.dataset.tab === 'schools') loadSchools();
