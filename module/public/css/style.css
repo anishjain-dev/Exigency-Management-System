@@ -313,6 +313,8 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
 .btn-secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: #f4f5f7; }
 
+.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
 .data-table button {
   padding: 6px 12px;
   border-radius: 6px;
