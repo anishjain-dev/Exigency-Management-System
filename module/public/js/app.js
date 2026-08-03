@@ -151,7 +151,7 @@ async function loadExigencies() {
 
   emptyState.hidden = rows.length !== 0;
   tbody.innerHTML = rows.map((r) => `
-    <tr data-id="${r.id}">
+    <tr data-id="${r.id}" data-resolved="${r.resolved || 'No'}">
       <td>${r.id}</td>
       <td>${r.school_code}</td>
       <td>${r.department || ''}</td>
@@ -170,24 +170,37 @@ async function loadExigencies() {
         ${r.reply_count > 0
           ? `<button class="view-replies-btn" data-id="${r.id}" title="Click to view the reply">
                <span class="reply-replied-label">Replied${r.reply_count > 1 ? ` (${r.reply_count})` : ''}</span>
-             </button><div class="reply-timestamp">${fmtDateTime(r.last_reply_at)}</div>`
+               <span class="reply-timestamp">${fmtDateTime(r.last_reply_at)}</span>
+             </button>`
           : '<span class="status-pill pill-muted">No reply</span>'}
       </td>
       <td><button class="save-row-btn">Save</button></td>
     </tr>
-    <tr class="reply-detail-row" data-replies-for="${r.id}" hidden><td colspan="10"></td></tr>
+    <tr class="reply-detail-row" data-replies-for="${r.id}" hidden><td colspan="11"></td></tr>
   `).join('');
 
   document.querySelectorAll('.save-row-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       const tr = e.target.closest('tr');
       const id = tr.dataset.id;
+      const wasResolved = tr.dataset.resolved === 'Yes';
       const payload = {
         immediate_actions: tr.querySelector('.edit-actions').value,
         resolved: tr.querySelector('.edit-resolved').value,
         closure_date: tr.querySelector('.edit-closure').value || null
       };
       await api(`/exigencies/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+
+      if (payload.resolved === 'Yes' && !wasResolved) {
+        const shouldNotify = confirm(
+          'Mark this exigency resolved and email everyone who received the original notification (department recipients + submitter) with the updated status?'
+        );
+        if (shouldNotify) {
+          const result = await api(`/exigencies/${id}/notify-status`, { method: 'POST' });
+          alert(result.sent ? 'Update email sent.' : 'Could not send the update email — check Logs for details.');
+        }
+      }
+
       loadExigencies();
     });
   });

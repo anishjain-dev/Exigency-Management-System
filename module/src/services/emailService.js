@@ -71,6 +71,23 @@ const BRAND = {
   bodyFont: "'Nunito','Segoe UI',Arial,sans-serif"
 };
 
+/**
+ * The stored value is usually a link to this module's own /api/report
+ * gallery endpoint. Rendering it as raw escaped URL text is useless to
+ * anyone reading the email off the sender's machine — render it as a
+ * plain "View attachment" link instead so it at least reads cleanly,
+ * even though the link itself only resolves on networks that can reach
+ * this module (localhost or wherever it's tunnelled/hosted).
+ */
+function formatAttachmentsLink(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return 'N/A';
+  if (/^https?:\/\//i.test(trimmed)) {
+    return `<a href="${escapeHtml(trimmed)}" style="color:${BRAND.blue};">View attachment</a>`;
+  }
+  return escapeHtml(trimmed);
+}
+
 function badgePill(text, bg) {
   return `<span style="display:inline-block;padding:2px 10px;border-radius:100px;background:${bg};color:#ffffff;font-size:11.5px;font-weight:700;font-family:${BRAND.headFont};">${escapeHtml(text)}</span>`;
 }
@@ -176,15 +193,10 @@ function buildHtmlEmail(record, appUrl) {
             The exigency below is <strong>unresolved</strong> and requires your action.
           </p>
         </td></tr>
-        <tr><td colspan="2" style="padding:0 12px 8px;">
+        <tr><td colspan="2" style="padding:0 12px 24px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
             ${brandFieldTable(rows)}
           </table>
-        </td></tr>
-        <tr><td colspan="2" style="padding:20px 26px 24px;">
-          <a href="${appUrl}" style="display:inline-block;background:${BRAND.red};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:6px;font-family:${BRAND.headFont};font-size:13.5px;font-weight:700;">
-            Open Dashboard
-          </a>
         </td></tr>
         ${brandFooter()}
       </table>
@@ -258,7 +270,7 @@ function buildSubmissionTableHtml(record) {
     ['Department', escapeHtml(record.department)],
     ['Is this a Critical Issue?', record.critical ? badgePill('CRITICAL', BRAND.red) : 'No'],
     ['Describe the Incident', escapeHtml(record.issue) || 'N/A'],
-    ['Photos/videos/documents', escapeHtml(record.attachments) || 'N/A'],
+    ['Photos/videos/documents', formatAttachmentsLink(record.attachments)],
     ['What immediate actions were taken?', escapeHtml(record.immediate_actions) || 'N/A'],
     ['Has the issue been resolved?', resolved === 'Yes' ? badgePill('RESOLVED', BRAND.blueDeep) : badgePill('NOT RESOLVED', BRAND.red)],
     ['If NOT RESOLVED, please specify the closure date.', fmtDate(record.closure_date)],
@@ -323,6 +335,46 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
   }
 }
 
+/**
+ * Sends a resolution-update notification on the same [id]-tagged thread as
+ * the original reminder/new-submission mail (see RECORD_TAG_RE in
+ * replyService.js), reusing buildHtmlEmail so the RESOLVED/NOT RESOLVED
+ * badge reflects the record's current state. Fired on-demand from the
+ * dashboard when a user confirms sending it after marking Resolved = Yes.
+ */
+async function sendStatusUpdateEmail(record, toEmails, ccEmails, appUrl) {
+  if (!isMailingEnabled()) {
+    writeLog({ recordId: record.id, type: 'STATUS_UPDATE', status: 'SKIPPED', message: 'Mailing is disabled (Settings!MailingEnabled=false).' });
+    return false;
+  }
+
+  const { to: recipients, cc, overridden } = applyRecipientOverride(toEmails, ccEmails);
+
+  if (recipients.length === 0) {
+    writeLog({ recordId: record.id, type: 'STATUS_UPDATE', status: 'SKIPPED', message: 'No recipients resolved.' });
+    return false;
+  }
+
+  const overrideNote = overridden ? ` [+CC: also sent to ForceRecipientEmail list]` : '';
+
+  try {
+    const transport = getTransport();
+    await transport.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: recipients.join(','),
+      cc: cc.join(','),
+      subject: `Update: Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
+      html: buildHtmlEmail(record, appUrl),
+      attachments: [LOGO_ATTACHMENT]
+    });
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'STATUS_UPDATE', status: 'SUCCESS', message: 'Status update email sent.' + overrideNote });
+    return true;
+  } catch (error) {
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'STATUS_UPDATE', status: 'FAILURE', message: 'Mail send failed: ' + error.message + overrideNote });
+    return false;
+  }
+}
+
 async function sendCriticalErrorEmail(context, error) {
   const settings = getAllSettings();
   const adminEmail = settings.AdminEmail;
@@ -340,4 +392,4 @@ async function sendCriticalErrorEmail(context, error) {
   }
 }
 
-module.exports = { sendReminderEmail, sendNewSubmissionEmail, sendCriticalErrorEmail, buildHtmlEmail, buildSubmissionTableHtml };
+module.exports = { sendReminderEmail, sendNewSubmissionEmail, sendStatusUpdateEmail, sendCriticalErrorEmail, buildHtmlEmail, buildSubmissionTableHtml };

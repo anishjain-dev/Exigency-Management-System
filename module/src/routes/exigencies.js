@@ -8,7 +8,12 @@ const express = require('express');
 const db = require('../db');
 const { writeLog } = require('../services/logService');
 const { createUniqueId } = require('../services/idService');
-const { resolveSchoolCode, resolveDepartment } = require('../services/settingsService');
+const { resolveSchoolCode, resolveDepartment, getDepartmentRecipients } = require('../services/settingsService');
+const { sendStatusUpdateEmail } = require('../services/emailService');
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
 
 const router = express.Router();
 
@@ -76,6 +81,27 @@ router.patch('/:id', (req, res) => {
   writeLog({ recordId: req.params.id, type: 'SYNC', status: 'INFO', message: 'Record updated: ' + fields.join(', ') });
 
   res.json(db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id));
+});
+
+/**
+ * Sends a resolution-update email to the same people who received the
+ * original notification for this record (department recipients + the
+ * submitter), reflecting whatever the record's current `resolved` state
+ * is. Triggered on-demand from the dashboard, not automatically on PATCH —
+ * the user confirms first via a popup.
+ */
+router.post('/:id/notify-status', async (req, res) => {
+  const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id);
+  if (!record) return res.status(404).json({ error: 'Not found' });
+
+  const recipients = getDepartmentRecipients(record.school_code, record.department);
+  const to = recipients.to.filter(isValidEmail);
+  const cc = [...recipients.cc, record.submitter_email].filter(isValidEmail);
+
+  const appUrl = `${req.protocol}://${req.get('host')}`;
+  const sent = await sendStatusUpdateEmail(record, to, cc, appUrl);
+
+  res.json({ sent });
 });
 
 router.post('/', (req, res) => {
