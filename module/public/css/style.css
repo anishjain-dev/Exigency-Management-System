@@ -251,6 +251,36 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   font-size: 13px;
 }
 
+#exigenciesTable { table-layout: fixed; min-width: 0; }
+#exigenciesTable th, #exigenciesTable td { overflow: hidden; text-overflow: ellipsis; white-space: normal; word-break: break-word; }
+#exigenciesTable th:nth-child(2), #exigenciesTable td:nth-child(2) { width: 6%; }
+#exigenciesTable th:nth-child(3), #exigenciesTable td:nth-child(3) { width: 6%; }
+#exigenciesTable th:nth-child(4), #exigenciesTable td:nth-child(4) { width: 8%; }
+#exigenciesTable th:nth-child(5), #exigenciesTable td:nth-child(5) { width: 5%; }
+#exigenciesTable th:nth-child(6), #exigenciesTable td:nth-child(6) { width: 7%; }
+#exigenciesTable th:nth-child(7), #exigenciesTable td:nth-child(7) { width: 6%; }
+#exigenciesTable th:nth-child(8), #exigenciesTable td:nth-child(8) { width: 8%; }
+#exigenciesTable th:nth-child(9), #exigenciesTable td:nth-child(9) { width: 6%; }
+#exigenciesTable th:nth-child(10), #exigenciesTable td:nth-child(10) { width: 8%; }
+#exigenciesTable th:nth-child(11), #exigenciesTable td:nth-child(11) { width: 18%; }
+#exigenciesTable th:nth-child(12), #exigenciesTable td:nth-child(12) { width: 17%; }
+
+#exigenciesTable th:first-child, #exigenciesTable td:first-child {
+  width: 36px;
+  padding-right: 0;
+  text-align: center;
+}
+
+#exigenciesTable thead th:last-child,
+#exigenciesTable tbody tr:not(.reply-detail-row) td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--card-bg);
+  box-shadow: -2px 0 4px rgba(0,0,0,0.06);
+}
+#exigenciesTable thead th:last-child { background: var(--primary); z-index: 3; }
+#exigenciesTable tbody tr:nth-child(even):not(.reply-detail-row) td:last-child { background: #eef4fa; }
+
 .data-table th, .data-table td {
   padding: 11px 14px;
   border-bottom: 1px solid var(--border);
@@ -344,6 +374,7 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .pill-critical { background: var(--danger); }
@@ -363,10 +394,11 @@ h2 { font-family: var(--head-font); font-size: 14px; font-weight: 700; margin: 0
   display: inline-block; padding: 3px 10px; border-radius: 100px;
   background: var(--success); color: #fff;
   font-family: var(--head-font); font-size: 10px; font-weight: 700; text-transform: uppercase;
+  white-space: nowrap; flex-shrink: 0;
 }
 .reply-snippet { font-weight: 600; white-space: normal; word-break: break-word; }
 .reply-count-badge { font-size: 10.5px; color: var(--success); font-weight: 700; }
-.reply-timestamp { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.reply-timestamp { font-size: 11px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
 
 .row-actions { display: flex; gap: 6px; white-space: nowrap; }
 .row-actions button { margin: 0; }
@@ -453,6 +485,7 @@ button.danger:hover { background: var(--danger); color: #fff; }
   .bar-track { background: #262e3a; }
   .data-table tbody tr:nth-child(even) { background: #1d2836; }
   .data-table tbody tr:hover { background: #223349; }
+  #exigenciesTable tbody tr:nth-child(even):not(.reply-detail-row) td:last-child { background: #1d2836; }
   .kpi-card { background: #1a2836; }
   .kpi-card.accent-critical { background: #2e1c1d; }
   .kpi-card.accent-success { background: #1a2836; }
