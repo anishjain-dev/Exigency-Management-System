@@ -87,4 +87,43 @@ async function runDailyReminderJob(appUrl) {
   return { sent, skipped };
 }
 
-module.exports = { runDailyReminderJob };
+/**
+ * Sends the reminder email right now for an explicitly-picked set of
+ * records (dashboard checkboxes), with an optional shared custom message.
+ * Unlike runDailyReminderJob, this ignores the resolved/closure-date/
+ * delay/already-reminded-today gating — an explicit manual selection
+ * always sends — but still stamps last_reminder_date/reminder_count so
+ * the daily cron doesn't also re-send the same one right after.
+ */
+async function sendSelectedReminders(ids, message, appUrl) {
+  const customMessage = String(message || '').trim();
+  let sent = 0;
+  let failed = 0;
+
+  for (const id of ids) {
+    try {
+      const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(id);
+      if (!record) { failed++; continue; }
+
+      const recipients = getDepartmentRecipients(record.school_code, record.department);
+      const to = recipients.to.filter(isValidEmail);
+      const cc = recipients.cc.filter(isValidEmail);
+
+      const wasSent = await sendReminderEmail(record, to, cc, 'MANUAL_REMINDER', appUrl, customMessage);
+      if (wasSent) {
+        db.prepare('UPDATE exigencies SET last_reminder_date = ?, reminder_count = reminder_count + 1 WHERE id = ?')
+          .run(new Date().toISOString(), id);
+        sent++;
+      } else {
+        failed++;
+      }
+    } catch (rowError) {
+      failed++;
+      writeLog({ recordId: id, type: 'ERROR', status: 'FAILURE', message: 'Manual reminder send failed: ' + rowError.message });
+    }
+  }
+
+  return { sent, failed };
+}
+
+module.exports = { runDailyReminderJob, sendSelectedReminders };

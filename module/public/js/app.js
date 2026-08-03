@@ -119,6 +119,27 @@ function renderBarList(containerId, rows, labelKey) {
   }).join('');
 }
 
+document.getElementById('sendSelectedReminderBtn').addEventListener('click', async () => {
+  const ids = Array.from(document.querySelectorAll('#exigenciesTable tbody .row-select:checked')).map((cb) => cb.value);
+  if (ids.length === 0) {
+    alert('Tick at least one exigency first.');
+    return;
+  }
+  const message = prompt(`Add a message to include in the reminder email for these ${ids.length} exigenc${ids.length > 1 ? 'ies' : 'y'} (optional, leave blank for none):`);
+  if (message === null) return; // cancelled
+  if (!confirm(`Send the reminder email right now for ${ids.length} selected exigenc${ids.length > 1 ? 'ies' : 'y'}?`)) return;
+
+  const btn = document.getElementById('sendSelectedReminderBtn');
+  btn.disabled = true;
+  try {
+    const result = await api('/reminders/send-selected', { method: 'POST', body: JSON.stringify({ ids, message }) });
+    alert(`Sent: ${result.sent}, failed: ${result.failed}.`);
+  } finally {
+    btn.disabled = false;
+    loadExigencies();
+  }
+});
+
 document.getElementById('runReminderBtn').addEventListener('click', async () => {
   const el = document.getElementById('reminderResult');
   if (!confirm('This will send real reminder emails to recipients now. Continue?')) {
@@ -152,6 +173,7 @@ async function loadExigencies() {
   emptyState.hidden = rows.length !== 0;
   tbody.innerHTML = rows.map((r) => `
     <tr data-id="${r.id}" data-resolved="${r.resolved || 'No'}">
+      <td><input type="checkbox" class="row-select" value="${r.id}"></td>
       <td>${r.id}</td>
       <td>${r.school_code}</td>
       <td>${r.department || ''}</td>
@@ -181,8 +203,14 @@ async function loadExigencies() {
         </div>
       </td>
     </tr>
-    <tr class="reply-detail-row" data-replies-for="${r.id}" hidden><td colspan="11"></td></tr>
+    <tr class="reply-detail-row" data-replies-for="${r.id}" hidden><td colspan="12"></td></tr>
   `).join('');
+
+  const selectAllBox = document.getElementById('selectAllExigencies');
+  selectAllBox.checked = false;
+  selectAllBox.onchange = () => {
+    document.querySelectorAll('#exigenciesTable tbody .row-select').forEach((cb) => { cb.checked = selectAllBox.checked; });
+  };
 
   document.querySelectorAll('.save-row-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {

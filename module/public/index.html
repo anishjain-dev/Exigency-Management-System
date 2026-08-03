@@ -92,11 +92,13 @@
               <option value="Yes">Resolved</option>
             </select>
             <button id="refreshExigenciesBtn" class="btn-secondary">Refresh</button>
+            <button id="sendSelectedReminderBtn" class="btn-primary">Send Reminder to Selected</button>
           </div>
           <div class="table-card">
             <table class="data-table" id="exigenciesTable">
               <thead>
                 <tr>
+                  <th><input type="checkbox" id="selectAllExigencies" title="Select all"></th>
                   <th>ID</th><th>School</th><th>Department</th><th>Critical</th><th>Issue</th>
                   <th>Location</th><th>Immediate Actions</th><th>Resolved</th><th>Closure Date</th><th>Replies</th><th></th>
                 </tr>

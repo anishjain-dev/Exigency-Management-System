@@ -14,7 +14,7 @@ const cors = require('cors');
 const cron = require('node-cron');
 
 const { getSetting } = require('./src/services/settingsService');
-const { runDailyReminderJob } = require('./src/services/reminderService');
+const { runDailyReminderJob, sendSelectedReminders } = require('./src/services/reminderService');
 const { sendCriticalErrorEmail } = require('./src/services/emailService');
 const { writeLog } = require('./src/services/logService');
 const { checkForReplies, startReplyWatcher } = require('./src/services/replyService');
@@ -42,6 +42,19 @@ app.post('/api/reminders/run-now', async (req, res) => {
   } catch (error) {
     console.error(error);
     await sendCriticalErrorEmail('run-now reminder job', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/reminders/send-selected', async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(Boolean) : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'No exigency ids provided.' });
+  try {
+    const result = await sendSelectedReminders(ids, req.body?.message, APP_URL);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    await sendCriticalErrorEmail('send-selected reminder job', error);
     res.status(500).json({ error: error.message });
   }
 });
