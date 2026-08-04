@@ -35,6 +35,60 @@ body {
   display: flex;
   min-height: 100vh;
 }
+.app-shell[hidden] { display: none; }
+
+/* ---------- Whole-app login gate ---------- */
+
+.app-login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+.app-login-overlay[hidden] { display: none; }
+
+.app-login-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px 30px;
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+}
+
+.app-login-logo { width: 100%; max-width: 220px; height: auto; margin: 0 auto 18px; display: block; }
+
+.app-login-card h2 {
+  font-family: var(--head-font);
+  font-size: 17px;
+  margin: 0 0 8px;
+  color: var(--primary);
+}
+
+.app-login-sub { font-size: 12.5px; color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+
+#appLoginForm { display: flex; flex-direction: column; gap: 10px; }
+
+#appLoginForm input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+}
+
+#appLoginForm button { margin-top: 4px; }
+
+.app-login-error { font-size: 12.5px; color: var(--danger); margin-top: 12px; min-height: 16px; }
+
+@media (prefers-color-scheme: dark) {
+  #appLoginForm input { background: #1b212a; color: var(--text); border-color: var(--border); }
+}
 
 /* ---------- Sidebar ---------- */
 
@@ -208,7 +262,7 @@ h2 { font-family: var(--head-font); font-size: 12.5px; font-weight: 700; margin:
   gap: 10px;
 }
 
-.panel-grid.two-col { margin-bottom: 10px; }
+.panel-grid.two-col { margin-bottom: 10px; align-items: start; }
 
 .panel {
   background: var(--card-bg);
@@ -319,6 +373,16 @@ h2 { font-family: var(--head-font); font-size: 12.5px; font-weight: 700; margin:
 .btn-secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: #f4f5f7; }
 
+/* Topbar sits on a light gradient — a plain btn-secondary (white bg, faint
+   border) barely registers there, so Logout gets a visible primary-colored
+   outline instead of the danger-red fill (this isn't a destructive action). */
+#adminLogoutBtn {
+  background: #fff;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+#adminLogoutBtn:hover { background: var(--primary); color: #fff; }
+
 .row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .data-table button {
@@ -403,6 +467,52 @@ h2 { font-family: var(--head-font); font-size: 12.5px; font-weight: 700; margin:
   border-radius: var(--radius);
   padding: 10px 12px;
   margin-bottom: 8px;
+  overflow-x: auto;
+}
+
+.school-recipients-table th, .school-recipients-table td {
+  padding: 3px 8px;
+}
+.school-recipients-table input {
+  padding: 4px 6px;
+}
+
+/* Below this width the To/CC columns get too cramped to read (email
+   addresses truncate) even with horizontal scroll — switch to one stacked
+   card per department instead, each field labeled via its data-label attr. */
+@media (max-width: 700px) {
+  .school-recipients-table, .school-recipients-table thead, .school-recipients-table tbody,
+  .school-recipients-table th, .school-recipients-table td, .school-recipients-table tr {
+    display: block;
+  }
+  .school-recipients-table thead { display: none; }
+  .school-recipients-table { min-width: 0; }
+  .school-recipients-table tr {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: var(--card-bg);
+  }
+  .school-recipients-table td {
+    border-bottom: none;
+    padding: 6px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .school-recipients-table td[data-label]:not([data-label=""])::before {
+    content: attr(data-label);
+    font-family: var(--head-font);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--primary);
+  }
+  .school-recipients-table td[data-label="Department"] {
+    font-weight: 700;
+  }
 }
 
 .school-card h3 { margin: 0; font-family: var(--head-font); font-size: 14px; font-weight: 700; }
@@ -440,6 +550,13 @@ button.danger:hover { background: var(--danger); color: #fff; }
   .side-nav { flex-direction: row; flex-wrap: wrap; }
   .brand-proportion-bar { display: none; }
   .panel-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  /* A fixed 180px label column leaves too little room for the input
+     (long email addresses) on small phones — stack label above input. */
+  .settings-form { grid-template-columns: 1fr; }
+  .settings-form label { margin-top: 6px; }
 }
 
 @media (prefers-color-scheme: dark) {

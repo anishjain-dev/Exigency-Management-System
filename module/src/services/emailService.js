@@ -27,6 +27,21 @@ function getTransport() {
   });
 }
 
+const SENDER_DISPLAY_NAME = 'Exigency Management System';
+
+/**
+ * Builds the "From" header. Settings!SenderEmail (admin-only, editable via
+ * the Settings tab after logging in) is the ONE fixed address every outgoing
+ * mail comes from, regardless of who filled the form or which department it
+ * routes to — falls back to the .env SMTP_FROM/SMTP_USER if not set yet.
+ */
+function getFromHeader() {
+  const settings = getAllSettings();
+  const email = String(settings.SenderEmail || '').trim() || process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (email.includes('<')) return email;
+  return `${SENDER_DISPLAY_NAME} <${email}>`;
+}
+
 function escapeHtml(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -240,7 +255,7 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
   try {
     const transport = getTransport();
     await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: getFromHeader(),
       to: recipients.join(','),
       cc: cc.join(','),
       subject: `Reminder : Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
@@ -325,7 +340,7 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
   try {
     const transport = getTransport();
     await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: getFromHeader(),
       to: recipients.join(','),
       cc: cc.join(','),
       subject: `${criticalPrefix}Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
@@ -365,7 +380,7 @@ async function sendStatusUpdateEmail(record, toEmails, ccEmails, appUrl) {
   try {
     const transport = getTransport();
     await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: getFromHeader(),
       to: recipients.join(','),
       cc: cc.join(','),
       subject: `Update : Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
@@ -382,12 +397,12 @@ async function sendStatusUpdateEmail(record, toEmails, ccEmails, appUrl) {
 
 async function sendCriticalErrorEmail(context, error) {
   const settings = getAllSettings();
-  const adminEmail = settings.AdminEmail;
+  const adminEmail = settings.AlertEmail;
   if (!adminEmail) return;
   try {
     const transport = getTransport();
     await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: getFromHeader(),
       to: adminEmail,
       subject: '[Exigency Management System] Critical Error',
       html: `<p><strong>Context:</strong> ${escapeHtml(context)}</p><p><strong>Error:</strong> ${escapeHtml(error.message || String(error))}</p>`

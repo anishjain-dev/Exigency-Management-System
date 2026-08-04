@@ -18,6 +18,7 @@ const { runDailyReminderJob, sendSelectedReminders } = require('./src/services/r
 const { sendCriticalErrorEmail } = require('./src/services/emailService');
 const { writeLog } = require('./src/services/logService');
 const { checkForReplies, startReplyWatcher } = require('./src/services/replyService');
+const { requireAdmin } = require('./src/services/authService');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -31,21 +32,22 @@ app.use('/api/report', require('./src/routes/report'));
 app.use('/api/exigencies', require('./src/routes/exigencies'));
 app.use('/api/schools', require('./src/routes/schools'));
 app.use('/api/settings', require('./src/routes/settings'));
+app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/logs', require('./src/routes/logs'));
 app.use('/api/dashboard', require('./src/routes/dashboard'));
 
-app.post('/api/reminders/run-now', async (req, res) => {
+app.post('/api/reminders/run-now', requireAdmin, async (req, res) => {
   try {
     const result = await runDailyReminderJob(APP_URL);
     res.json(result);
   } catch (error) {
     console.error(error);
     await sendCriticalErrorEmail('run-now reminder job', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-app.post('/api/reminders/send-selected', async (req, res) => {
+app.post('/api/reminders/send-selected', requireAdmin, async (req, res) => {
   const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(Boolean) : [];
   if (ids.length === 0) return res.status(400).json({ error: 'No exigency ids provided.' });
   try {
@@ -54,7 +56,7 @@ app.post('/api/reminders/send-selected', async (req, res) => {
   } catch (error) {
     console.error(error);
     await sendCriticalErrorEmail('send-selected reminder job', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

@@ -58,12 +58,15 @@ Submissions are made at **http://localhost:4000/report.html**.
 
 ## 3. Configure Settings
 
-In the dashboard's **Settings** tab, fill in:
-- `AdminEmail`, `DefaultCC`
-- `OrgDomain` (e.g. `protego.services`) and/or `FsGroupEmail` — used to
-  authorize submitters, same rule as before
+In the dashboard's **Settings** tab (login required — see Admin Login below), fill in:
+- `SenderEmail` — the one fixed address every outgoing mail comes from
+- `AlertEmail`, `DefaultCC`
 - `ReminderTriggerHour` — restart the server (`Ctrl+C` then `npm start`)
   after changing this so the cron job picks up the new hour
+
+Note: anyone can submit the form (no submitter-authorization gate) — every
+submission notifies the department's real recipients AND the submitter gets
+their own confirmation copy.
 
 ## 4. Add schools and recipients
 

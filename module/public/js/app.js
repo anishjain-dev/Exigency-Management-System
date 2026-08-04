@@ -29,9 +29,17 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
   });
 });
 
+function getAdminToken() {
+  return localStorage.getItem('adminToken') || '';
+}
+
 async function api(path, options) {
+  const token = getAdminToken();
   const res = await fetch('/api' + path, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {})
+    },
     ...options
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
@@ -286,10 +294,26 @@ const DEPARTMENT_ORDER = [
   'Other'
 ];
 
+/**
+ * "Other" always sorts last, and any custom department not in
+ * DEPARTMENT_ORDER (indexOf === -1) sorts after the known ones instead of
+ * before them (plain indexOf-difference would put unknowns first, since
+ * -1 - -1 = 0 ties with the unknown's real neighbors but -1 < any real index).
+ */
+function compareDepartments(a, b) {
+  if (/^others?$/i.test(a)) return 1;
+  if (/^others?$/i.test(b)) return -1;
+  const ai = DEPARTMENT_ORDER.indexOf(a);
+  const bi = DEPARTMENT_ORDER.indexOf(b);
+  if (ai === -1 && bi === -1) return a.localeCompare(b);
+  if (ai === -1) return 1;
+  if (bi === -1) return -1;
+  return ai - bi;
+}
+
 async function loadSchools() {
   const schools = await api('/schools');
-  const departments = (await api('/schools/departments')).slice().sort(
-    (a, b) => DEPARTMENT_ORDER.indexOf(a) - DEPARTMENT_ORDER.indexOf(b)
+  const departments = (await api('/schools/departments')).slice().sort(compareDepartments
   );
 
   const filterSchoolSelect = document.getElementById('filterSchool');
@@ -338,10 +362,10 @@ async function loadSchools() {
             const existing = (s.departments || []).find((d) => d.department === dept) || { to_emails: '', cc_emails: '' };
             return `
               <tr data-school="${s.code}" data-dept="${dept}">
-                <td>${dept}</td>
-                <td><input class="recipient-to" value="${existing.to_emails || ''}" placeholder="comma-separated emails" /></td>
-                <td><input class="recipient-cc" value="${existing.cc_emails || ''}" placeholder="comma-separated emails" /></td>
-                <td><button class="save-recipients-btn">Save</button></td>
+                <td data-label="Department">${dept}</td>
+                <td data-label="To"><input class="recipient-to" value="${existing.to_emails || ''}" placeholder="comma-separated emails" required /></td>
+                <td data-label="CC"><input class="recipient-cc" value="${existing.cc_emails || ''}" placeholder="comma-separated emails" /></td>
+                <td data-label=""><button class="save-recipients-btn">Save</button></td>
               </tr>`;
           }).join('')}
         </tbody>
@@ -352,8 +376,10 @@ async function loadSchools() {
   document.querySelectorAll('.save-recipients-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       const tr = e.target.closest('tr');
-      const to = tr.querySelector('.recipient-to').value;
-      const cc = tr.querySelector('.recipient-cc').value;
+      const toInput = tr.querySelector('.recipient-to');
+      const to = toInput.value.trim();
+      const cc = tr.querySelector('.recipient-cc').value.trim();
+      if (!toInput.reportValidity()) return;
       await api(`/schools/${encodeURIComponent(tr.dataset.school)}/departments/${encodeURIComponent(tr.dataset.dept)}`, {
         method: 'PUT', body: JSON.stringify({ to, cc })
       });
@@ -440,18 +466,29 @@ document.getElementById('addDeptForm').addEventListener('submit', async (e) => {
 });
 
 const SETTINGS_FIELDS = [
-  'MailingEnabled', 'AdminEmail', 'DefaultCC', 'OrgDomain', 'FsGroupEmail', 'ForceRecipientEmail',
-  'ReminderTriggerHour', 'DashboardTriggerHour', 'ReminderDelayDays'
+  'SenderEmail', 'MailingEnabled', 'AlertEmail', 'DefaultCC', 'ForceRecipientEmail',
+  'ReminderTriggerHour', 'ReminderDelayDays'
 ];
+
+// Display-only label overrides — the underlying setting key (left side)
+// stays what the backend reads/writes; only the on-screen text changes.
+const SETTINGS_LABELS = {
+  SenderEmail: 'Admin Email (Sender Email)'
+};
 
 async function loadSettings() {
   const settings = await api('/settings');
   const form = document.getElementById('settingsForm');
   form.innerHTML = SETTINGS_FIELDS.map((key) => `
-    <label for="setting-${key}">${key}</label>
+    <label for="setting-${key}">${SETTINGS_LABELS[key] || key}</label>
     <input id="setting-${key}" name="${key}" value="${settings[key] || ''}" />
   `).join('');
 }
+
+document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('adminToken');
+  showLoginOverlay();
+});
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
   const payload = {};
@@ -459,9 +496,13 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     const el = document.getElementById('setting-' + key);
     if (el) payload[key] = el.value;
   });
-  await api('/settings', { method: 'PUT', body: JSON.stringify(payload) });
-  document.getElementById('settingsSaved').textContent = 'Saved (restart server to apply new reminder hour).';
-  setTimeout(() => { document.getElementById('settingsSaved').textContent = ''; }, 4000);
+  try {
+    await api('/settings', { method: 'PUT', body: JSON.stringify(payload) });
+    document.getElementById('settingsSaved').textContent = 'Saved (restart server to apply new reminder hour).';
+    setTimeout(() => { document.getElementById('settingsSaved').textContent = ''; }, 4000);
+  } catch (err) {
+    document.getElementById('settingsSaved').textContent = 'Save failed: ' + err.message;
+  }
 });
 
 async function loadLogs() {
@@ -478,23 +519,80 @@ async function loadLogs() {
   `).join('');
 }
 
-// Initial load.
-loadSchools().then(loadDashboard);
-
 /**
- * Auto-refresh the active tab every 5s so new submissions/replies (the
- * IMAP watcher can land a reply within seconds) show up without a manual
- * refresh. Skipped while the user is actively editing a field in the
- * exigencies table, so a background refresh never wipes out an in-progress
- * edit.
+ * Whole-dashboard login gate — this app shows PII (submitter emails,
+ * incident details) and lets an admin trigger real emails/deletes, so
+ * nothing renders until a valid admin token is confirmed. The token itself
+ * is checked server-side (GET /api/admin/verify) rather than just trusting
+ * that localStorage has *something* in it.
  */
-setInterval(() => {
-  const activeTab = document.querySelector('.tab-panel.active')?.id;
-  if (activeTab === 'tab-exigencies') {
-    const table = document.getElementById('exigenciesTable');
-    if (document.activeElement && table.contains(document.activeElement)) return;
-    loadExigencies();
-  } else if (activeTab === 'tab-dashboard') {
-    loadDashboard();
+let refreshTimer = null;
+
+function showLoginOverlay(message) {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  document.getElementById('appShell').hidden = true;
+  document.getElementById('appLoginOverlay').hidden = false;
+  document.getElementById('appLoginError').textContent = message || '';
+}
+
+function showApp() {
+  document.getElementById('appLoginOverlay').hidden = true;
+  document.getElementById('appShell').hidden = false;
+  initApp();
+}
+
+function initApp() {
+  loadSchools().then(loadDashboard);
+
+  /**
+   * Auto-refresh the active tab every 5s so new submissions/replies (the
+   * IMAP watcher can land a reply within seconds) show up without a manual
+   * refresh. Skipped while the user is actively editing a field in the
+   * exigencies table, so a background refresh never wipes out an
+   * in-progress edit.
+   */
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    const activeTab = document.querySelector('.tab-panel.active')?.id;
+    if (activeTab === 'tab-exigencies') {
+      const table = document.getElementById('exigenciesTable');
+      if (document.activeElement && table.contains(document.activeElement)) return;
+      loadExigencies();
+    } else if (activeTab === 'tab-dashboard') {
+      loadDashboard();
+    } else if (activeTab === 'tab-logs') {
+      loadLogs();
+    }
+  }, 5000);
+}
+
+document.getElementById('appLoginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('appLoginUsername').value;
+  const password = document.getElementById('appLoginPassword').value;
+  const errorEl = document.getElementById('appLoginError');
+  errorEl.textContent = '';
+  try {
+    const { token } = await api('/admin/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+    localStorage.setItem('adminToken', token);
+    document.getElementById('appLoginForm').reset();
+    showApp();
+  } catch (err) {
+    errorEl.textContent = 'Login failed: ' + err.message;
   }
-}, 5000);
+});
+
+// Boot: verify any stored token with the server before showing the app —
+// an expired/tampered token in localStorage must not grant a false sense
+// of being logged in.
+(async () => {
+  const token = getAdminToken();
+  if (!token) { showLoginOverlay(); return; }
+  try {
+    await api('/admin/verify');
+    showApp();
+  } catch {
+    localStorage.removeItem('adminToken');
+    showLoginOverlay('Session expired — please log in again.');
+  }
+})();

@@ -7,7 +7,21 @@
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div class="app-login-overlay" id="appLoginOverlay">
+    <div class="app-login-card">
+      <img src="/images/fountainhead-logo.png" alt="Fountainhead" class="app-login-logo" />
+      <h2>Admin Login</h2>
+      <p class="app-login-sub">This dashboard contains exigency records and contact details — please sign in.</p>
+      <form id="appLoginForm">
+        <input id="appLoginUsername" placeholder="Username" autocomplete="username" required />
+        <input id="appLoginPassword" type="password" placeholder="Password" autocomplete="current-password" required />
+        <button type="submit" class="btn-primary">Login</button>
+      </form>
+      <div id="appLoginError" class="app-login-error"></div>
+    </div>
+  </div>
+
+  <div class="app-shell" id="appShell" hidden>
     <aside class="sidebar">
       <div class="brand">
         <img src="/images/fountainhead-logo.png" alt="Fountainhead" class="brand-logo" />
@@ -49,7 +63,7 @@
       <header class="topbar">
         <h1 id="pageTitle">Dashboard</h1>
         <div class="topbar-actions">
-          <button id="sendSelectedReminderBtn" class="btn-primary" hidden>Send Reminder</button>
+          <button id="adminLogoutBtn" class="btn-secondary">Logout</button>
         </div>
       </header>
 
@@ -91,6 +105,7 @@
               <option value="Yes">Resolved</option>
             </select>
             <button id="refreshExigenciesBtn" class="btn-secondary">Refresh</button>
+            <button id="sendSelectedReminderBtn" class="btn-primary" hidden>Send Reminder</button>
           </div>
           <div class="table-card">
             <table class="data-table" id="exigenciesTable">
@@ -132,8 +147,10 @@
         </section>
 
         <section id="tab-settings" class="tab-panel">
-          <div class="panel">
-            <div class="panel-header"><h2>System Settings</h2></div>
+          <div class="panel" id="settingsPanel">
+            <div class="panel-header">
+              <h2>System Settings</h2>
+            </div>
             <form id="settingsForm" class="settings-form"></form>
             <div class="settings-actions">
               <button id="saveSettingsBtn" class="btn-primary">Save Settings</button>

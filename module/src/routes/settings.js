@@ -7,6 +7,7 @@
 
 const express = require('express');
 const { getAllSettings, setSettings } = require('../services/settingsService');
+const { requireAdmin } = require('../services/authService');
 
 const router = express.Router();
 
@@ -14,7 +15,9 @@ router.get('/', (req, res) => {
   res.json(getAllSettings());
 });
 
-router.put('/', (req, res) => {
+// Admin-only: this includes SenderName/SenderEmail (who mail appears to come
+// from) alongside the rest of the settings the tab exposes.
+router.put('/', requireAdmin, (req, res) => {
   setSettings(req.body || {});
   res.json(getAllSettings());
 });

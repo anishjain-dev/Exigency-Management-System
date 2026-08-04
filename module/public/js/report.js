@@ -112,14 +112,29 @@ const DEPARTMENT_ORDER = [
   'Other'
 ];
 
+/**
+ * "Other" always sorts last, and any custom department not in
+ * DEPARTMENT_ORDER (indexOf === -1) sorts after the known ones instead of
+ * before them (plain indexOf-difference would put unknowns first, since
+ * -1 - -1 = 0 ties with the unknown's real neighbors but -1 < any real index).
+ */
+function compareDepartments(a, b) {
+  if (/^others?$/i.test(a)) return 1;
+  if (/^others?$/i.test(b)) return -1;
+  const ai = DEPARTMENT_ORDER.indexOf(a);
+  const bi = DEPARTMENT_ORDER.indexOf(b);
+  if (ai === -1 && bi === -1) return a.localeCompare(b);
+  if (ai === -1) return 1;
+  if (bi === -1) return -1;
+  return ai - bi;
+}
+
 async function populateDropdowns() {
   const [schools, departmentsRaw] = await Promise.all([
     api('/schools'),
     api('/schools/departments')
   ]);
-  const departments = departmentsRaw.slice().sort(
-    (a, b) => DEPARTMENT_ORDER.indexOf(a) - DEPARTMENT_ORDER.indexOf(b)
-  );
+  const departments = departmentsRaw.slice().sort(compareDepartments);
 
   schoolSelect = createCustomSelect({
     triggerId: 'schoolTrigger',

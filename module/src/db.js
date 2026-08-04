@@ -113,10 +113,10 @@ if (!replyColumns.includes('from_name')) {
 /** Seeds sane defaults + real school/department/recipient data on first run only. */
 function seedDefaults() {
   const defaults = {
-    AdminEmail: '',
+    // Only used for critical system-error alerts (e.g. cron crash) — not
+    // shown to submitters or department recipients.
+    AlertEmail: '',
     DefaultCC: '',
-    OrgDomain: 'fountainheadschools.org',
-    FsGroupEmail: '',
     // TEST MODE: when set, ALL outgoing mail (reminders + new-submission
     // notifications) is redirected to only this address, regardless of the
     // real department recipients. Clear this value to resume real routing.
@@ -125,6 +125,11 @@ function seedDefaults() {
     // and new-submission notices) to everyone, without touching any other
     // config. Records still save/update normally either way.
     MailingEnabled: 'true',
+    // The ONE fixed address every outgoing mail comes from, regardless of
+    // who submits the form or which department it's routed to. Admin-only
+    // (via the Settings tab's login) since it affects every email the
+    // system sends. Empty falls back to SMTP_FROM/SMTP_USER from .env.
+    SenderEmail: '',
     ResolvedValue: 'Yes',
     ReminderTriggerHour: '8',
     DashboardTriggerHour: '9',
@@ -140,6 +145,17 @@ function seedDefaults() {
   };
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   Object.entries(defaults).forEach(([key, value]) => insertSetting.run(key, value));
+
+  // One-time migration: AdminEmail was renamed to AlertEmail (clearer name —
+  // it's only used for critical-error alerts). Carry over any existing
+  // value, then drop the old key. OrgDomain/FsGroupEmail's submitter
+  // authorization gate was removed entirely (anyone can now submit), so
+  // those keys are no longer read anywhere — drop them too.
+  const oldAdminEmail = db.prepare("SELECT value FROM settings WHERE key = 'AdminEmail'").get();
+  if (oldAdminEmail) {
+    db.prepare("UPDATE settings SET value = ? WHERE key = 'AlertEmail'").run(oldAdminEmail.value);
+  }
+  db.prepare("DELETE FROM settings WHERE key IN ('AdminEmail', 'OrgDomain', 'FsGroupEmail')").run();
 
   const schoolCount = db.prepare('SELECT COUNT(*) AS c FROM schools').get().c;
   if (schoolCount === 0) {

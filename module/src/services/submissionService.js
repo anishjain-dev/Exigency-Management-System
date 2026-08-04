@@ -16,26 +16,11 @@
 const db = require('../db');
 const { createUniqueId } = require('./idService');
 const { writeLog } = require('./logService');
-const { resolveSchoolCode, resolveDepartment, isKnownSchool, getSetting, getDepartmentRecipients } = require('./settingsService');
+const { resolveSchoolCode, resolveDepartment, isKnownSchool, getDepartmentRecipients } = require('./settingsService');
 const { sendNewSubmissionEmail } = require('./emailService');
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
-}
-
-function isAuthorizedSubmitter(email) {
-  if (!email) return false;
-  const value = String(email).trim().toLowerCase();
-
-  const fsGroupEmails = String(getSetting('FsGroupEmail', '') || '')
-    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  if (fsGroupEmails.includes(value)) return true;
-
-  // Supports one or more comma-separated domains, e.g.
-  // "fountainheadschools.org,protego.services" — any match authorizes.
-  const orgDomains = String(getSetting('OrgDomain', '') || '')
-    .split(',').map((s) => s.trim().toLowerCase().replace(/^@/, '')).filter(Boolean);
-  return orgDomains.some((domain) => value.endsWith('@' + domain));
 }
 
 /**
@@ -47,11 +32,6 @@ async function processSubmission(body, appUrl) {
   const submitterEmail = body.submitterEmail || '';
   const schoolRaw = body.school || '';
   const issue = body.issue || '';
-
-  if (!isAuthorizedSubmitter(submitterEmail)) {
-    writeLog({ recipient: submitterEmail, type: 'SYNC', status: 'FAILURE', message: 'Unauthorized submitter: ' + submitterEmail });
-    return { accepted: false, reason: 'Unauthorized submitter (not in FS Group / org domain).' };
-  }
 
   if (!schoolRaw || !issue) {
     writeLog({ recipient: submitterEmail, type: 'SYNC', status: 'FAILURE', message: 'Row validation failed: missing School or Issue description.' });
@@ -87,7 +67,10 @@ async function processSubmission(body, appUrl) {
     const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(id);
     const recipients = getDepartmentRecipients(schoolCode, department);
     const to = recipients.to.filter(isValidEmail);
-    const cc = recipients.cc.filter(isValidEmail);
+    // The submitter always gets their own confirmation copy, alongside the
+    // real department to/cc recipients — added to cc rather than to so the
+    // department's own to/cc list stays the primary audience.
+    const cc = Array.from(new Set([...recipients.cc, submitterEmail])).filter(isValidEmail);
     await sendNewSubmissionEmail(record, to, cc, appUrl);
   } catch (mailError) {
     writeLog({ recordId: id, type: 'NEW_SUBMISSION', status: 'FAILURE', message: 'Notification send threw: ' + mailError.message });
@@ -96,4 +79,4 @@ async function processSubmission(body, appUrl) {
   return { accepted: true, id };
 }
 
-module.exports = { processSubmission, isAuthorizedSubmitter };
+module.exports = { processSubmission };

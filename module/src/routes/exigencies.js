@@ -10,12 +10,18 @@ const { writeLog } = require('../services/logService');
 const { createUniqueId } = require('../services/idService');
 const { resolveSchoolCode, resolveDepartment, getDepartmentRecipients } = require('../services/settingsService');
 const { sendStatusUpdateEmail, sendReminderEmail } = require('../services/emailService');
+const { requireAdmin } = require('../services/authService');
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
 
 const router = express.Router();
+
+// Exigency records contain submitter PII and incident details — every route
+// here is admin-only (the public report form submits through /api/report
+// instead, which stays open).
+router.use(requireAdmin);
 
 router.get('/', (req, res) => {
   const { school, department, resolved, critical } = req.query;
