@@ -473,7 +473,8 @@ const SETTINGS_FIELDS = [
 // Display-only label overrides — the underlying setting key (left side)
 // stays what the backend reads/writes; only the on-screen text changes.
 const SETTINGS_LABELS = {
-  SenderEmail: 'Admin Email (Sender Email)'
+  SenderEmail: 'Admin Email (Sender Email)',
+  ForceRecipientEmail: 'Extra Recipient Email'
 };
 
 async function loadSettings() {
