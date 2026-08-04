@@ -94,6 +94,9 @@ body {
 .field { display: flex; flex-direction: column; gap: 6px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 
+.signed-in-as { font-size: 13.5px; color: #1a2230; display: flex; align-items: center; gap: 10px; }
+.link-btn { background: none; border: none; color: #005BAA; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; }
+
 label {
   font-size: 12.5px;
   font-weight: 700;

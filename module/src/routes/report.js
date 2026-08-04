@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const express = require('express');
 const multer = require('multer');
 const { processSubmission } = require('../services/submissionService');
+const { verifyGoogleIdToken } = require('../services/googleAuthService');
 
 const router = express.Router();
 
@@ -113,9 +114,19 @@ router.get('/gallery/:batchId', (req, res) => {
 </body></html>`);
 });
 
+// Client IDs are not secret (only used to identify the app to Google, no
+// secret material) - safe to hand to the frontend on load.
+router.get('/config', (req, res) => {
+  res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || '' });
+});
+
 router.post('/submit', async (req, res) => {
   const appUrl = `${req.protocol}://${req.get('host')}`;
-  const result = await processSubmission(req.body || {}, appUrl);
+  const google = await verifyGoogleIdToken(req.body?.googleIdToken);
+  if (!google) {
+    return res.json({ accepted: false, reason: 'Please sign in with Google before submitting.' });
+  }
+  const result = await processSubmission({ ...(req.body || {}), submitterEmail: google.email }, appUrl);
   res.json(result);
 });
 

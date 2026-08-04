@@ -5,6 +5,7 @@
 <title>Report an Exigency — Fountainhead</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="/css/report.css" />
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div class="page">
@@ -35,9 +36,13 @@
     </header>
 
     <form id="reportForm" class="report-card">
-      <div class="field">
-        <label for="submitterEmail">Your Email <span class="req">*</span></label>
-        <input type="email" id="submitterEmail" name="submitterEmail" required placeholder="you@fountainheadschools.org" />
+      <div class="field" id="googleSignInField">
+        <label>Your Email <span class="req">*</span></label>
+        <div id="googleSignInButton"></div>
+        <div id="signedInAs" class="signed-in-as" hidden>
+          Signed in as <strong id="signedInEmail"></strong>
+          <button type="button" id="switchAccountBtn" class="link-btn">Switch account</button>
+        </div>
       </div>
 
       <div class="field">

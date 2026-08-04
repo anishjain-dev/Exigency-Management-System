@@ -154,16 +154,57 @@ async function populateDropdowns() {
   });
 }
 
-const REMEMBERED_EMAIL_KEY = 'exigency.rememberedEmail';
+/**
+ * Google Sign-In replaces the old free-text email field: the submitter's
+ * email now comes from a verified Google session (see
+ * googleAuthService.js on the backend, which re-verifies the ID token
+ * server-side - the client-side decode below is only for displaying the
+ * signed-in email, never trusted on its own).
+ */
+let googleIdToken = null;
+let googleEmail = null;
 
-function loadRememberedEmail() {
-  const fromUrl = new URLSearchParams(window.location.search).get('email');
-  const saved = fromUrl || localStorage.getItem(REMEMBERED_EMAIL_KEY);
-  if (saved) document.getElementById('submitterEmail').value = saved;
+function decodeJwtPayload(jwt) {
+  const payload = jwt.split('.')[1];
+  return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
 }
 
-function saveRememberedEmail(email) {
-  if (email) localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+function onGoogleSignIn(response) {
+  googleIdToken = response.credential;
+  const payload = decodeJwtPayload(response.credential);
+  googleEmail = payload.email;
+  document.getElementById('signedInEmail').textContent = googleEmail;
+  document.getElementById('signedInAs').hidden = false;
+  document.getElementById('googleSignInButton').hidden = true;
+  document.getElementById('submitBtn').disabled = false;
+}
+
+function signOutOfGoogle() {
+  googleIdToken = null;
+  googleEmail = null;
+  document.getElementById('signedInAs').hidden = true;
+  document.getElementById('googleSignInButton').hidden = false;
+  document.getElementById('submitBtn').disabled = true;
+  if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect();
+}
+
+document.getElementById('switchAccountBtn').addEventListener('click', signOutOfGoogle);
+document.getElementById('submitBtn').disabled = true;
+
+async function initGoogleSignIn() {
+  const { googleClientId } = await api('/report/config');
+  if (!googleClientId) return;
+
+  // accounts.google.com/gsi/client loads with async/defer, so it may not
+  // be ready yet even though the DOM is - poll briefly instead of assuming.
+  const start = Date.now();
+  while (!window.google?.accounts?.id) {
+    if (Date.now() - start > 8000) return; // give up quietly, button just won't render
+    await new Promise((r) => setTimeout(r, 100));
+  }
+
+  window.google.accounts.id.initialize({ client_id: googleClientId, callback: onGoogleSignIn });
+  window.google.accounts.id.renderButton(document.getElementById('googleSignInButton'), { theme: 'outline', size: 'large', width: 320 });
 }
 
 function toggleClosureDate() {
@@ -181,6 +222,12 @@ document.getElementById('reportForm').addEventListener('submit', async (e) => {
 
   const school = schoolSelect.getValue();
   const department = departmentGroup.getValue();
+
+  if (!googleIdToken) {
+    msg.textContent = 'Please sign in with Google first.';
+    msg.className = 'form-message error';
+    return;
+  }
 
   if (!school || !department) {
     if (!school) schoolSelect.markInvalid();
@@ -210,7 +257,7 @@ document.getElementById('reportForm').addEventListener('submit', async (e) => {
 
     const payload = {
       timestamp: new Date().toISOString(),
-      submitterEmail: form.submitterEmail.value.trim(),
+      googleIdToken,
       school,
       dateOfIncident: form.dateOfIncident.value,
       location: form.location.value,
@@ -228,12 +275,10 @@ document.getElementById('reportForm').addEventListener('submit', async (e) => {
     if (result.accepted) {
       msg.textContent = `Submitted — Form Number ${result.id}. The concerned department has been notified.`;
       msg.className = 'form-message success';
-      saveRememberedEmail(payload.submitterEmail);
       form.reset();
       schoolSelect.reset();
       departmentGroup.reset();
       toggleClosureDate();
-      loadRememberedEmail();
     } else {
       msg.textContent = result.reason || 'Submission was not accepted.';
       msg.className = 'form-message error';
@@ -248,4 +293,4 @@ document.getElementById('reportForm').addEventListener('submit', async (e) => {
 
 populateDropdowns();
 toggleClosureDate();
-loadRememberedEmail();
+initGoogleSignIn();
