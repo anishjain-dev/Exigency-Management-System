@@ -363,15 +363,31 @@ async function loadSchools() {
             return `
               <tr data-school="${s.code}" data-dept="${dept}">
                 <td data-label="Department">${dept}</td>
-                <td data-label="To"><input class="recipient-to" value="${existing.to_emails || ''}" placeholder="comma-separated emails" required /></td>
-                <td data-label="CC"><input class="recipient-cc" value="${existing.cc_emails || ''}" placeholder="comma-separated emails" /></td>
-                <td data-label=""><button class="save-recipients-btn">Save</button></td>
+                <td data-label="To"><input class="recipient-to" value="${existing.to_emails || ''}" placeholder="comma-separated emails" required readonly /></td>
+                <td data-label="CC"><input class="recipient-cc" value="${existing.cc_emails || ''}" placeholder="comma-separated emails" readonly /></td>
+                <td data-label="" class="row-actions">
+                  <button class="edit-recipients-btn">Edit</button>
+                  <button class="save-recipients-btn" disabled>Save</button>
+                </td>
               </tr>`;
           }).join('')}
         </tbody>
       </table>
     </div>
   `).join('');
+
+  // Recipient emails render read-only by default — click Edit to unlock a
+  // row before changing it, so scrolling/copy-pasting through a long list of
+  // near-identical rows can't accidentally overwrite an address.
+  document.querySelectorAll('.edit-recipients-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const tr = e.target.closest('tr');
+      tr.querySelector('.recipient-to').readOnly = false;
+      tr.querySelector('.recipient-cc').readOnly = false;
+      tr.querySelector('.save-recipients-btn').disabled = false;
+      tr.querySelector('.recipient-to').focus();
+    });
+  });
 
   document.querySelectorAll('.save-recipients-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
@@ -384,7 +400,12 @@ async function loadSchools() {
         method: 'PUT', body: JSON.stringify({ to, cc })
       });
       btn.textContent = 'Saved!';
-      setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+      setTimeout(() => {
+        btn.textContent = 'Save';
+        btn.disabled = true;
+        tr.querySelector('.recipient-to').readOnly = true;
+        tr.querySelector('.recipient-cc').readOnly = true;
+      }, 1500);
     });
   });
 
