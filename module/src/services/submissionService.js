@@ -66,11 +66,8 @@ async function processSubmission(body, appUrl) {
   try {
     const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(id);
     const recipients = getDepartmentRecipients(schoolCode, department);
-    const to = recipients.to.filter(isValidEmail);
-    // The submitter always gets their own confirmation copy, alongside the
-    // real department to/cc recipients — added to cc rather than to so the
-    // department's own to/cc list stays the primary audience.
-    const cc = Array.from(new Set([...recipients.cc, submitterEmail])).filter(isValidEmail);
+    const to = Array.from(new Set([...recipients.to, submitterEmail])).filter(isValidEmail);
+    const cc = recipients.cc.filter(isValidEmail);
     await sendNewSubmissionEmail(record, to, cc, appUrl);
   } catch (mailError) {
     writeLog({ recordId: id, type: 'NEW_SUBMISSION', status: 'FAILURE', message: 'Notification send threw: ' + mailError.message });
