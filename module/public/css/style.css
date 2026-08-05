@@ -419,7 +419,7 @@ h2 { font-family: var(--head-font); font-size: 12.5px; font-weight: 700; margin:
 }
 .btn-report:hover { background: var(--primary); color: #fff; }
 
-.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.row-actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
 
 .data-table button {
   padding: 6px 12px;
@@ -569,7 +569,9 @@ h2 { font-family: var(--head-font); font-size: 12.5px; font-weight: 700; margin:
   }
   .school-recipients-table td[data-label="Department"] {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
+    word-break: normal;
+    overflow-wrap: anywhere;
   }
   /* Actions row — Edit/Save side by side */
   .school-recipients-table td[data-label=""] {
