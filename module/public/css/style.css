@@ -160,6 +160,7 @@ body {
 }
 
 .tab-btn svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; opacity: 0.7; }
+.nav-label-short { display: none; }
 
 .tab-btn:hover { background: #f4f7fb; color: var(--text); }
 
@@ -644,6 +645,8 @@ button.danger:hover { background: var(--danger); color: #fff; }
     justify-content: center;
   }
   .tab-btn svg { width: 20px; height: 20px; }
+  .nav-label-full { display: none; }
+  .nav-label-short { display: inline; }
 
   /* Topbar smaller on mobile */
   .topbar { padding: 12px 16px; }

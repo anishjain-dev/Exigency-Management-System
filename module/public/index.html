@@ -21,8 +21,9 @@
     </div>
   </div>
 
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <div class="app-shell" id="appShell" hidden>
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="brand">
         <img src="/images/fountainhead-logo.png" alt="Fountainhead" class="brand-logo" />
       </div>
@@ -44,7 +45,7 @@
         </button>
         <button class="tab-btn" data-tab="schools">
           <svg viewBox="0 0 24 24"><path d="M12 3 1 9l11 6 9-4.91V17h2V9zM5 13.18v4L12 21l7-3.82v-4L12 17z"/></svg>
-          Schools &amp; Recipients
+          <span class="nav-label-full">Schools &amp; Recipients</span><span class="nav-label-short">Recipients</span>
         </button>
         <button class="tab-btn" data-tab="settings">
           <svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.14 7.14 0 0 0 .05-.94 7.14 7.14 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.65l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.7 8.83a.5.5 0 0 0 .12.65l2.03 1.58c-.03.31-.05.62-.05.94s.02.63.05.94L2.82 14.5a.5.5 0 0 0-.12.65l1.92 3.32c.14.24.42.32.61.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.24.1.47.02.61-.22l1.92-3.32a.5.5 0 0 0-.12-.65zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/></svg>
@@ -60,7 +61,12 @@
 
     <div class="main-area">
       <header class="topbar">
-        <h1 id="pageTitle">Dashboard</h1>
+        <div class="topbar-left">
+          <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
         <div class="topbar-actions">
           <button id="adminLogoutBtn" class="btn-secondary">Logout</button>
         </div>
