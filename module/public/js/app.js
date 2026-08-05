@@ -447,10 +447,10 @@ async function loadSchools() {
     });
   });
 
-  // Auto-resize all recipient textareas on initial render (defer one frame so layout is ready)
-  requestAnimationFrame(() => {
+  // Auto-resize all recipient textareas once layout is ready
+  setTimeout(() => {
     document.querySelectorAll('.recipient-to, .recipient-cc').forEach(autoResize);
-  });
+  }, 50);
 
   document.querySelectorAll('.edit-school-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
