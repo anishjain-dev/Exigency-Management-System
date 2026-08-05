@@ -218,24 +218,13 @@ input, select, textarea {
 
 select { cursor: pointer; }
 
-.file-input-wrap {
-  border: 2px dashed var(--border);
-  border-radius: 7px;
-  background: #fbfcfe;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
 .file-input-wrap input[type="file"] {
+  font-size: 13.5px;
+  color: var(--ink);
+  cursor: pointer;
   border: none;
   background: none;
   padding: 0;
-  font-size: 13.5px;
-  color: var(--ink);
-  width: 100%;
-  cursor: pointer;
   box-shadow: none;
 }
 .file-input-wrap:hover {

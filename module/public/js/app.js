@@ -170,9 +170,9 @@ async function loadExigencies() {
       <td>${r.school_code}</td>
       <td>${r.department || ''}</td>
       <td>${r.critical ? '<span class="status-pill pill-critical">CRITICAL</span>' : '<span class="status-pill pill-muted">No</span>'}</td>
-      <td title="${(r.issue || '').replace(/"/g, '&quot;')}">${(r.issue || '').slice(0, 40)}</td>
+      <td class="cell-wrap" title="${(r.issue || '').replace(/"/g, '&quot;')}">${(r.issue || '').slice(0, 60)}</td>
       <td>${r.location || ''}</td>
-      <td><input class="edit-actions" value="${(r.immediate_actions || '').replace(/"/g, '&quot;')}" /></td>
+      <td class="cell-wrap">${(r.immediate_actions || '')}</td>
       <td>
         <select class="edit-resolved">
           <option value="No" ${r.resolved !== 'Yes' ? 'selected' : ''}>No</option>
@@ -210,7 +210,7 @@ async function loadExigencies() {
       const id = tr.dataset.id;
       const wasResolved = tr.dataset.resolved === 'Yes';
       const payload = {
-        immediate_actions: tr.querySelector('.edit-actions').value,
+        immediate_actions: tr.querySelector('.cell-wrap:nth-child(8)')?.textContent?.trim() || '',
         resolved: tr.querySelector('.edit-resolved').value,
         closure_date: tr.querySelector('.edit-closure').value || null
       };
@@ -377,11 +377,11 @@ async function loadSchools() {
               <tr data-school="${s.code}" data-dept="${dept}">
                 <td data-label="Department">${dept}</td>
                 <td data-label="To">
-                  <div class="email-display to-display">${existing.to_emails || ''}</div>
+                  <div class="email-display to-display">${(existing.to_emails||'').split(',').map(e=>e.trim()).filter(Boolean).reduce((acc,e,i)=> acc + e + ((i%2===1 && i < (existing.to_emails||'').split(',').filter(Boolean).length-1) ? '\n' : (i < (existing.to_emails||'').split(',').filter(Boolean).length-1 ? ', ' : '')), '')}</div>
                   <textarea class="recipient-to" placeholder="comma-separated emails" required style="display:none;width:100%;resize:none;overflow:hidden;min-height:36px">${existing.to_emails || ''}</textarea>
                 </td>
                 <td data-label="CC">
-                  <div class="email-display cc-display">${existing.cc_emails || ''}</div>
+                  <div class="email-display cc-display">${(existing.cc_emails||'').split(',').map(e=>e.trim()).filter(Boolean).reduce((acc,e,i,arr)=> acc + e + ((i%2===1 && i < arr.length-1) ? '\n' : (i < arr.length-1 ? ', ' : '')), '')}</div>
                   <textarea class="recipient-cc" placeholder="comma-separated emails" style="display:none;width:100%;resize:none;overflow:hidden;min-height:36px">${existing.cc_emails || ''}</textarea>
                 </td>
                 <td data-label="" class="row-actions">
@@ -430,8 +430,9 @@ async function loadSchools() {
         btn.disabled = true;
         const toVal = tr.querySelector('.recipient-to').value;
         const ccVal = tr.querySelector('.recipient-cc').value;
-        tr.querySelector('.to-display').textContent = toVal;
-        tr.querySelector('.cc-display').textContent = ccVal;
+        const fmtEmails = (s) => { const a=s.split(',').map(e=>e.trim()).filter(Boolean); return a.reduce((acc,e,i)=> acc+e+((i%2===1&&i<a.length-1)?'\n':(i<a.length-1?', ':'')), ''); };
+        tr.querySelector('.to-display').textContent = fmtEmails(toVal);
+        tr.querySelector('.cc-display').textContent = fmtEmails(ccVal);
         tr.querySelector('.to-display').style.display = '';
         tr.querySelector('.cc-display').style.display = '';
         tr.querySelector('.recipient-to').style.display = 'none';
