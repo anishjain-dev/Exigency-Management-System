@@ -324,6 +324,24 @@ function compareDepartments(a, b) {
   return ai - bi;
 }
 
+// Format emails: 2 per line, deduplicated
+function fmtTwo(raw) {
+  const emails = [...new Set(
+    (raw||'').split(/[\n,]+/).map(e => e.trim()).filter(Boolean)
+  )];
+  const lines = [];
+  for (let i = 0; i < emails.length; i += 2) {
+    lines.push(emails.slice(i, i + 2).join(', '));
+  }
+  return lines.join('\n');
+}
+
+// Auto-resize textarea to fit content
+function autoResize(ta) {
+  ta.style.height = '0px';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
 async function loadSchools() {
   const schools = await api('/schools');
   const departments = (await api('/schools/departments')).slice().sort(compareDepartments
@@ -377,12 +395,10 @@ async function loadSchools() {
               <tr data-school="${s.code}" data-dept="${dept}">
                 <td data-label="Department">${dept}</td>
                 <td data-label="To">
-                  <div class="email-display to-display">${(existing.to_emails||'').split(',').map(e=>e.trim()).filter(Boolean).reduce((acc,e,i)=> acc + e + ((i%2===1 && i < (existing.to_emails||'').split(',').filter(Boolean).length-1) ? '\n' : (i < (existing.to_emails||'').split(',').filter(Boolean).length-1 ? ', ' : '')), '')}</div>
-                  <textarea class="recipient-to" placeholder="comma-separated emails" required style="display:none;width:100%;resize:none;overflow:hidden;min-height:36px">${existing.to_emails || ''}</textarea>
+                  <textarea class="recipient-to" placeholder="emails, comma-separated" readonly>${fmtTwo((existing.to_emails||''))}</textarea>
                 </td>
                 <td data-label="CC">
-                  <div class="email-display cc-display">${(existing.cc_emails||'').split(',').map(e=>e.trim()).filter(Boolean).reduce((acc,e,i,arr)=> acc + e + ((i%2===1 && i < arr.length-1) ? '\n' : (i < arr.length-1 ? ', ' : '')), '')}</div>
-                  <textarea class="recipient-cc" placeholder="comma-separated emails" style="display:none;width:100%;resize:none;overflow:hidden;min-height:36px">${existing.cc_emails || ''}</textarea>
+                  <textarea class="recipient-cc" placeholder="emails, comma-separated" readonly>${fmtTwo((existing.cc_emails||''))}</textarea>
                 </td>
                 <td data-label="" class="row-actions">
                   <button class="edit-recipients-btn">Edit</button>
@@ -401,15 +417,17 @@ async function loadSchools() {
   document.querySelectorAll('.edit-recipients-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const tr = e.target.closest('tr');
-      tr.querySelector('.to-display').style.display = 'none';
-      tr.querySelector('.cc-display').style.display = 'none';
       const ta = tr.querySelector('.recipient-to');
       const tc = tr.querySelector('.recipient-cc');
-      ta.style.display = '';
-      tc.style.display = '';
-      ta.style.height = ta.scrollHeight + 'px';
-      tc.style.height = tc.scrollHeight + 'px';
+      ta.removeAttribute('readonly');
+      tc.removeAttribute('readonly');
+      ta.classList.add('editing');
+      tc.classList.add('editing');
+      autoResize(ta); autoResize(tc);
+      ta.addEventListener('input', () => autoResize(ta));
+      tc.addEventListener('input', () => autoResize(tc));
       tr.querySelector('.save-recipients-btn').disabled = false;
+      btn.disabled = true;
       ta.focus();
     });
   });
@@ -418,27 +436,20 @@ async function loadSchools() {
     btn.addEventListener('click', async (e) => {
       const tr = e.target.closest('tr');
       const toInput = tr.querySelector('.recipient-to');
-      const to = toInput.value.trim();
-      const cc = tr.querySelector('.recipient-cc').value.trim();
-      if (!toInput.reportValidity()) return;
+      const ccInput = tr.querySelector('.recipient-cc');
+      const to = [...new Set(toInput.value.replace(/\n/g,',').split(',').map(e=>e.trim()).filter(Boolean))].join(', ');
+      const cc = [...new Set(ccInput.value.replace(/\n/g,',').split(',').map(e=>e.trim()).filter(Boolean))].join(', ');
       await api(`/schools/${encodeURIComponent(tr.dataset.school)}/departments/${encodeURIComponent(tr.dataset.dept)}`, {
         method: 'PUT', body: JSON.stringify({ to, cc })
       });
       btn.textContent = 'Saved!';
-      setTimeout(() => {
-        btn.textContent = 'Save';
-        btn.disabled = true;
-        const toVal = tr.querySelector('.recipient-to').value;
-        const ccVal = tr.querySelector('.recipient-cc').value;
-        const fmtEmails = (s) => { const a=s.split(',').map(e=>e.trim()).filter(Boolean); return a.reduce((acc,e,i)=> acc+e+((i%2===1&&i<a.length-1)?'\n':(i<a.length-1?', ':'')), ''); };
-        tr.querySelector('.to-display').textContent = fmtEmails(toVal);
-        tr.querySelector('.cc-display').textContent = fmtEmails(ccVal);
-        tr.querySelector('.to-display').style.display = '';
-        tr.querySelector('.cc-display').style.display = '';
-        tr.querySelector('.recipient-to').style.display = 'none';
-        tr.querySelector('.recipient-cc').style.display = 'none';
-      }, 1500);
+      setTimeout(() => loadSchools(), 800);
     });
+  });
+
+  // Auto-resize all recipient textareas on initial render (defer one frame so layout is ready)
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.recipient-to, .recipient-cc').forEach(autoResize);
   });
 
   document.querySelectorAll('.edit-school-btn').forEach((btn) => {
@@ -484,7 +495,9 @@ async function loadSchools() {
  */
 async function deleteWithConfirm(path, label) {
   if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
-  let res = await fetch('/api' + path, { method: 'DELETE' });
+  const token = getAdminToken();
+  const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) };
+  let res = await fetch('/api' + path, { method: 'DELETE', headers });
   if (res.status === 409) {
     const body = await res.json().catch(() => ({}));
     const proceed = confirm(
@@ -492,7 +505,7 @@ async function deleteWithConfirm(path, label) {
       `They will be kept as-is, but recipient routing for it will be removed. Continue?`
     );
     if (!proceed) return;
-    res = await fetch('/api' + path + '?force=true', { method: 'DELETE' });
+    res = await fetch('/api' + path + '?force=true', { method: 'DELETE', headers });
   }
   if (!res.ok) {
     alert('Delete failed: ' + res.statusText);

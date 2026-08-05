@@ -36,7 +36,7 @@ function setSettings(entries) {
 }
 
 function getSchools() {
-  return db.prepare('SELECT code, name FROM schools ORDER BY code').all();
+  return db.prepare('SELECT code, name FROM schools ORDER BY rowid DESC').all();
 }
 
 function upsertSchool(code, name) {
@@ -49,7 +49,7 @@ function upsertSchool(code, name) {
 }
 
 function getDepartments() {
-  return db.prepare('SELECT name FROM departments ORDER BY name').all().map((r) => r.name);
+  return db.prepare('SELECT name FROM departments ORDER BY rowid DESC').all().map((r) => r.name);
 }
 
 function upsertDepartment(name) {

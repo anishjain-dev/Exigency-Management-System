@@ -626,18 +626,45 @@ button.danger:hover { background: var(--danger); color: #fff; }
   max-height: none;
   height: auto;
 }
-.school-recipients-table textarea {
+.email-display:empty {
+  display: none;
+}
+.school-recipients-table textarea.recipient-to,
+.school-recipients-table textarea.recipient-cc {
   font-family: inherit;
   font-size: 12px;
-  padding: 4px 6px;
-  border: 1px solid var(--border);
+  padding: 5px 8px;
+  border: 1px solid transparent;
   border-radius: 4px;
-  background: var(--card-bg, #fff);
+  background: transparent;
   color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
   resize: none;
   overflow: hidden;
-  width: 100%;
   min-height: 36px;
+  height: 36px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  cursor: default;
+  display: block;
+}
+.school-recipients-table textarea.recipient-to[readonly],
+.school-recipients-table textarea.recipient-cc[readonly] {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+  color: var(--text);
+  min-height: 36px;
+}
+.school-recipients-table textarea.recipient-to.editing,
+.school-recipients-table textarea.recipient-cc.editing {
+  background: #fff;
+  border-color: #1a73e8;
+  cursor: text;
+  box-shadow: 0 0 0 2px rgba(26,115,232,0.15);
 }
 
 @media (prefers-color-scheme: dark) {
