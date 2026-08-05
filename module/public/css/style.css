@@ -510,10 +510,13 @@ h2 { font-family: var(--head-font); font-size: 12.5px; font-weight: 700; margin:
   width: 100%;
   table-layout: fixed;
 }
+.school-recipients-table {
+  table-layout: fixed;
+  width: 100%;
+}
 .school-recipients-table th, .school-recipients-table td {
   padding: 6px 8px;
   vertical-align: top;
-  word-break: break-all;
   overflow-wrap: break-word;
 }
 .school-recipients-table th:nth-child(1),
@@ -647,7 +650,7 @@ button.danger:hover { background: var(--danger); color: #fff; }
   height: 36px;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: break-word;
   cursor: default;
   display: block;
 }
