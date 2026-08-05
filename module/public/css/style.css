@@ -601,9 +601,28 @@ button.danger:hover { background: var(--danger); color: #fff; }
 
 @media (max-width: 900px) {
   .app-shell { flex-direction: column; }
-  .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; align-items: center; flex-wrap: wrap; }
-  .side-nav { flex-direction: row; flex-wrap: wrap; }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: sticky;
+    top: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 10px;
+    gap: 10px;
+    z-index: 20;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .brand { padding: 0; flex-shrink: 0; }
+  .brand-logo { height: 32px; width: auto; }
+  .brand-subtitle-row { display: none; }
   .brand-proportion-bar { display: none; }
+  .side-nav { flex-direction: row; flex-wrap: nowrap; gap: 2px; flex: 1; overflow-x: auto; }
+  .tab-btn { padding: 7px 10px; font-size: 12px; white-space: nowrap; }
+  .sidebar-footer { display: none; }
+  .btn-report { display: none; }
   .panel-grid { grid-template-columns: 1fr; }
 }
 
