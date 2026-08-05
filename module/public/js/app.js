@@ -609,6 +609,21 @@ function showApp() {
 }
 
 function initApp() {
+  // Hamburger menu toggle for mobile
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('mobileNavOverlay');
+  function closeDrawer() {
+    sidebar?.classList.remove('open');
+    overlay?.classList.remove('open');
+  }
+  hamburgerBtn?.addEventListener('click', () => {
+    const isOpen = sidebar?.classList.toggle('open');
+    overlay?.classList.toggle('open', isOpen);
+  });
+  overlay?.addEventListener('click', closeDrawer);
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', closeDrawer));
+
   loadSchools().then(loadDashboard);
 
   /**
