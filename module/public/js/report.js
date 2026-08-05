@@ -174,7 +174,9 @@ function onGoogleSignIn(response) {
   const payload = decodeJwtPayload(response.credential);
   googleEmail = payload.email;
   document.getElementById('signedInEmail').textContent = googleEmail;
-  document.getElementById('signedInAs').hidden = false;
+  document.getElementById('recordEmailAddr').textContent = googleEmail;
+  document.getElementById('gAccountBlock').hidden = false;
+  document.getElementById('gEmailRecord').hidden = false;
   document.getElementById('googleSignInButton').hidden = true;
   document.getElementById('submitBtn').disabled = false;
 }
@@ -182,7 +184,8 @@ function onGoogleSignIn(response) {
 function signOutOfGoogle() {
   googleIdToken = null;
   googleEmail = null;
-  document.getElementById('signedInAs').hidden = true;
+  document.getElementById('gAccountBlock').hidden = true;
+  document.getElementById('gEmailRecord').hidden = true;
   document.getElementById('googleSignInButton').hidden = false;
   document.getElementById('submitBtn').disabled = true;
   if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect();

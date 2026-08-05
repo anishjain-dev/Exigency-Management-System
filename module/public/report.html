@@ -33,96 +33,140 @@
         <p>&ndash; Fountainhead School</p>
       </div>
       <div class="proportion-bar"><span class="blue"></span><span class="red"></span><span class="yellow"></span></div>
+
+      <!-- Account bar inside header card, like Google Forms -->
+      <div id="gAccountBlock" hidden>
+        <div class="g-account-bar">
+          <div class="g-account-lines">
+            <span class="g-account-email" id="signedInEmail"></span>
+            <button type="button" id="switchAccountBtn" class="g-switch">Switch account</button>
+          </div>
+          <svg class="g-cloud" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" transform="translate(0 0) scale(0.83) translate(2.4 2.4)"/>
+          </svg>
+        </div>
+        <p class="g-notice">The name, email, and photo associated with your Google account will be recorded when you upload files and submit this form</p>
+        <hr class="g-divider" />
+        <p class="g-required-note"><span class="req">*</span> Indicates required question</p>
+      </div>
     </header>
 
-    <form id="reportForm" class="report-card">
-      <div class="field" id="googleSignInField">
-        <label>Your Email <span class="req">*</span></label>
-        <div id="googleSignInButton"></div>
-        <div id="signedInAs" class="signed-in-as" hidden>
-          Signed in as <strong id="signedInEmail"></strong>
-          <button type="button" id="switchAccountBtn" class="link-btn">Switch account</button>
-        </div>
-      </div>
+    <form id="reportForm" class="report-cards">
 
-      <div class="field">
-        <label id="schoolLabel">School Selection <span class="req">*</span></label>
-        <div class="custom-select" id="schoolSelect">
-          <button type="button" class="custom-select-trigger" id="schoolTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="schoolLabel">Select school&hellip;</button>
-          <div class="custom-select-options" id="schoolOptions" role="listbox" hidden></div>
-        </div>
-      </div>
-
-      <div class="row2">
+      <!-- Email -->
+      <div class="q-card">
         <div class="field">
-          <label for="dateOfIncident">Date of the Incident <span class="req">*</span></label>
-          <input type="date" id="dateOfIncident" name="dateOfIncident" required />
+          <label>Email <span class="req">*</span></label>
+          <div id="googleSignInButton"></div>
+          <label class="g-email-record" id="gEmailRecord" hidden>
+            <input type="checkbox" id="recordEmailCheck" checked disabled />
+            <span>Record <strong id="recordEmailAddr"></strong> as the email to be included with my response</span>
+          </label>
         </div>
+      </div>
+
+      <!-- School Selection -->
+      <div class="q-card">
         <div class="field">
-          <label for="location">Location <span class="req">*</span></label>
-          <p class="field-help">(Block, Floor, Room, Bus No., Area name, etc.)</p>
-          <input type="text" id="location" name="location" required placeholder="e.g. floor, bus, kitchen" />
+          <label id="schoolLabel">School Selection <span class="req">*</span></label>
+          <div class="custom-select" id="schoolSelect">
+            <button type="button" class="custom-select-trigger" id="schoolTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="schoolLabel">Select school&hellip;</button>
+            <div class="custom-select-options" id="schoolOptions" role="listbox" hidden></div>
+          </div>
         </div>
       </div>
 
-      <div class="field">
-        <label id="departmentLabel">Choose the Department <span class="req">*</span></label>
-        <ul class="field-help">
-          <li>👉 <strong>Student Safety / Medical Emergency:</strong> 🚑 Sudden illness, fainting, asthma attack, seizures, allergic reactions, or need for urgent first aid beyond minor cuts/scrapes</li>
-          <li><strong>Transport Issue:</strong> 🚌 Bus/Van accident, unsafe bus driving, inappropriate bus staff behavior, missing student during transport, or student/staff injury while commuting</li>
-          <li><strong>Kitchen:</strong> 🍽️ Fire breakout, foreign body in food, unhygienic kitchen practices, expired food, or illness due to food</li>
-          <li><strong>Events:</strong> 🎉 Injury, mismanagement, missing student, or concern during on-campus or off-campus events</li>
-          <li><strong>Infrastructure/Safety Issues:</strong> 🏗️ Electrical faults, equipment malfunction, unsafe construction, or fire-related hazards</li>
-          <li><strong>Animal/Reptile Issue:</strong> Reptile or stray animal sighting on school campus</li>
-          <li><strong>Staff Safety & Conduct:</strong> Misconduct, verbal/physical conflict, or medical assistance needed for staff (Excluding POSH)</li>
-          <li><strong>Other / Not Listed:</strong> ✳️ Any incident not covered in the categories above</li>
-        </ul>
-        <div class="radio-group" id="departmentOptions" role="radiogroup" aria-labelledby="departmentLabel"></div>
-      </div>
-
-      <div class="field">
-        <label for="critical">Is this a Critical Issue? <span class="req">*</span></label>
-        <div class="field-help">
-          <p>Mark this issue as <strong>Critical</strong> if it involves or may lead to <strong>immediate danger, injury, or serious risk to student or staff safety</strong>, especially in cases involving <strong>children</strong>.</p>
-          <p>Critical issues require <strong>urgent attention</strong> from the leadership team.</p>
-          <p><strong>Examples:</strong></p>
-          <ul>
-            <li>🔴 Student injury, medical emergency, or visible trauma</li>
-            <li>🔴 Electrical hazards, fire, or significant infrastructure failure</li>
-            <li>🔴 Transport accidents, missing child, or serious staff misbehavior in transit</li>
-            <li>🔴 Foreign body in food that causes or could cause food poisoning</li>
-            <li>🔴 Physical fights, serious misconduct, or threat to life/safety</li>
-            <li>🔴 Animal sightings that pose a safety threat (e.g., snake, aggressive stray dog)</li>
-          </ul>
-          <p>Use <strong>Not Critical</strong> for issues that are concerning but do not pose an immediate risk, such as:</p>
-          <ul>
-            <li>🔵 Minor conflicts or misbehavior</li>
-            <li>🔵 Foreign body in food discovered before consumption and with no health effects</li>
-          </ul>
+      <!-- Date of Incident + Location -->
+      <div class="q-card">
+        <div class="row2">
+          <div class="field">
+            <label for="dateOfIncident">Date of the Incident <span class="req">*</span></label>
+            <input type="date" id="dateOfIncident" name="dateOfIncident" required />
+          </div>
+          <div class="field">
+            <label for="location">Location <span class="req">*</span></label>
+            <input type="text" id="location" name="location" required placeholder="e.g. floor, bus, kitchen" />
+            <p class="field-help">(Block, Floor, Room, Bus No., Area name, etc.)</p>
+          </div>
         </div>
-        <select id="critical" name="critical" required>
-          <option value="No">No</option>
-          <option value="Yes">Yes</option>
-        </select>
       </div>
 
-      <div class="field">
-        <label for="issue">Describe the Incident <span class="req">*</span></label>
-        <textarea id="issue" name="issue" rows="4" required></textarea>
+      <!-- Department -->
+      <div class="q-card">
+        <div class="field">
+          <label id="departmentLabel">Choose the Department <span class="req">*</span></label>
+          <ul class="field-help" style="margin-top:10px;">
+            <li>👉 <strong>Student Safety / Medical Emergency:</strong> 🚑 Sudden illness, fainting, asthma attack, seizures, allergic reactions, or need for urgent first aid beyond minor cuts/scrapes</li>
+            <li><strong>Transport Issue:</strong> 🚌 Bus/Van accident, unsafe bus driving, inappropriate bus staff behavior, missing student during transport, or student/staff injury while commuting</li>
+            <li><strong>Kitchen:</strong> 🍽️ Fire breakout, foreign body in food, unhygienic kitchen practices, expired food, or illness due to food</li>
+            <li><strong>Events:</strong> 🎉 Injury, mismanagement, missing student, or concern during on-campus or off-campus events</li>
+            <li><strong>Infrastructure/Safety Issues:</strong> 🏗️ Electrical faults, equipment malfunction, unsafe construction, or fire-related hazards</li>
+            <li><strong>Animal/Reptile Issue:</strong> Reptile or stray animal sighting on school campus</li>
+            <li><strong>Staff Safety & Conduct:</strong> Misconduct, verbal/physical conflict, or medical assistance needed for staff (Excluding POSH)</li>
+            <li><strong>Other / Not Listed:</strong> ✳️ Any incident not covered in the categories above</li>
+          </ul>
+          <div class="radio-group" id="departmentOptions" role="radiogroup" aria-labelledby="departmentLabel"></div>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="attachments">Photos/videos/documents</label>
-        <input type="file" id="attachments" name="attachments" multiple accept="image/*,video/*,.pdf,.doc,.docx" />
-        <p class="field-help">Up to 5 files, 10MB each.</p>
+      <!-- Critical -->
+      <div class="q-card">
+        <div class="field">
+          <label for="critical">Is this a Critical Issue? <span class="req">*</span></label>
+          <div class="field-help">
+            <p>Mark this issue as <strong>Critical</strong> if it involves or may lead to <strong>immediate danger, injury, or serious risk to student or staff safety</strong>, especially in cases involving <strong>children</strong>.</p>
+            <p>Critical issues require <strong>urgent attention</strong> from the leadership team.</p>
+            <p><strong>Examples:</strong></p>
+            <ul>
+              <li>🔴 Student injury, medical emergency, or visible trauma</li>
+              <li>🔴 Electrical hazards, fire, or significant infrastructure failure</li>
+              <li>🔴 Transport accidents, missing child, or serious staff misbehavior in transit</li>
+              <li>🔴 Foreign body in food that causes or could cause food poisoning</li>
+              <li>🔴 Physical fights, serious misconduct, or threat to life/safety</li>
+              <li>🔴 Animal sightings that pose a safety threat (e.g., snake, aggressive stray dog)</li>
+            </ul>
+            <p>Use <strong>Not Critical</strong> for issues that are concerning but do not pose an immediate risk, such as:</p>
+            <ul>
+              <li>🔵 Minor conflicts or misbehavior</li>
+              <li>🔵 Foreign body in food discovered before consumption and with no health effects</li>
+            </ul>
+          </div>
+          <select id="critical" name="critical" required>
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="immediateActions">What immediate actions were taken? <span class="req">*</span></label>
-        <textarea id="immediateActions" name="immediateActions" rows="3" required></textarea>
+      <!-- Describe Incident -->
+      <div class="q-card">
+        <div class="field">
+          <label for="issue">Describe the Incident <span class="req">*</span></label>
+          <textarea id="issue" name="issue" rows="4" required></textarea>
+        </div>
       </div>
 
-      <div class="row2">
+      <!-- Attachments -->
+      <div class="q-card">
+        <div class="field">
+          <label for="attachments">Photos/videos/documents</label>
+          <div class="file-input-wrap">
+            <input type="file" id="attachments" name="attachments" multiple accept="image/*,video/*,.pdf,.doc,.docx" />
+          </div>
+          <p class="field-help">Up to 5 files, 10MB each.</p>
+        </div>
+      </div>
+
+      <!-- Immediate Actions -->
+      <div class="q-card">
+        <div class="field">
+          <label for="immediateActions">What immediate actions were taken? <span class="req">*</span></label>
+          <textarea id="immediateActions" name="immediateActions" rows="3" required></textarea>
+        </div>
+      </div>
+
+      <!-- Resolved + Closure Date -->
+      <div class="q-card">
         <div class="field">
           <label for="resolved">Has the issue been resolved? <span class="req">*</span></label>
           <select id="resolved" name="resolved" required>
@@ -137,10 +181,13 @@
         </div>
       </div>
 
-      <div class="field">
-        <label for="suggestedChanges">Any suggested Policy, Training, Infra, Services or Process change required? <span class="req">*</span></label>
-        <p class="field-help">Write NONE if not required.</p>
-        <textarea id="suggestedChanges" name="suggestedChanges" rows="3" required></textarea>
+      <!-- Suggested Changes -->
+      <div class="q-card">
+        <div class="field">
+          <label for="suggestedChanges">Any suggested Policy, Training, Infra, Services or Process change required? <span class="req">*</span></label>
+          <p class="field-help">Write NONE if not required.</p>
+          <textarea id="suggestedChanges" name="suggestedChanges" rows="3" required></textarea>
+        </div>
       </div>
 
       <button type="submit" id="submitBtn" class="btn-submit">Submit Report</button>

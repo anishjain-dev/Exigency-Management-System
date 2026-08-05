@@ -22,21 +22,22 @@ body {
 }
 
 .page {
-  max-width: 640px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 24px 20px 64px;
 }
 
 .masthead {
   background: #ffffff;
-  border-radius: 12px 12px 0 0;
+  border-radius: 8px;
   padding: 26px 28px 20px;
   color: var(--ink);
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .masthead-logo {
-  height: 42px;
+  height: 72px;
   width: auto;
   display: block;
   margin-bottom: 18px;
@@ -59,10 +60,10 @@ body {
 }
 
 .intro-text {
-  font-size: 13.5px;
-  color: var(--sub);
+  font-size: 14px;
+  color: var(--ink);
   line-height: 1.6;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 .intro-text p { margin: 0 0 12px; }
 .intro-text p:last-child { margin-bottom: 0; }
@@ -81,21 +82,53 @@ body {
 .proportion-bar .red { width: 45%; background: var(--red); }
 .proportion-bar .yellow { width: 10%; background: var(--yellow); }
 
-.report-card {
-  background: var(--card);
-  border-radius: 0 0 12px 12px;
-  padding: 26px 28px 30px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+/* Google-style: each question in its own white card, grey bg gap between */
+.report-cards {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.q-card {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.g-required-note {
+  margin: -4px 0 0;
 }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 
-.signed-in-as { font-size: 13.5px; color: #1a2230; display: flex; align-items: center; gap: 10px; }
-.link-btn { background: none; border: none; color: #005BAA; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; }
+/* ---------- Google-style account block (mirrors the Google Form) ---------- */
+#gAccountBlock { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+#gAccountBlock[hidden] { display: none; }
+.g-account-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.g-account-lines { display: flex; flex-direction: row; align-items: baseline; flex-wrap: nowrap; gap: 14px; min-width: 0; }
+.g-account-email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-switch { white-space: nowrap; }
+.g-account-email { font-size: 14px; font-weight: 700; color: #202124; font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; }
+.g-switch { background: none; border: none; color: #1a73e8; font-size: 13px; font-weight: 500; cursor: pointer; padding: 0; }
+.g-switch:hover { text-decoration: underline; }
+.g-cloud { width: 22px; height: 22px; fill: #5f6368; flex-shrink: 0; }
+.g-notice { margin: 0; font-size: 12px; color: #70757a; line-height: 1.5; font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; }
+.g-notice-link { color: #1a73e8; }
+
+.g-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 0; }
+.g-required-note { font-size: 12.5px; color: var(--red); font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; margin: 0; }
+.g-required-note .req { margin-right: 2px; }
+
+.g-email-record { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 400; color: #202124; cursor: default; font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; }
+.g-email-record input[type="checkbox"] { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--blue); cursor: default; }
+.g-email-record strong { font-weight: 700; }
 
 label {
   font-size: 12.5px;
@@ -184,6 +217,31 @@ input, select, textarea {
 .custom-select-option.selected { background: var(--blue); color: #ffffff; }
 
 select { cursor: pointer; }
+
+.file-input-wrap {
+  border: 2px dashed var(--border);
+  border-radius: 7px;
+  background: #fbfcfe;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.file-input-wrap input[type="file"] {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 13.5px;
+  color: var(--ink);
+  width: 100%;
+  cursor: pointer;
+  box-shadow: none;
+}
+.file-input-wrap:hover {
+  border-color: var(--blue);
+  background: var(--tint);
+}
 
 /* ---------- Radio group (Department) ---------- */
 .radio-group { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }

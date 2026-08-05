@@ -85,7 +85,7 @@ async function loadDashboard() {
 }
 
 async function loadRecentExigencies() {
-  const rows = (await api('/exigencies')).slice(0, 8);
+  const rows = await api('/exigencies');
   const tbody = document.querySelector('#recentExigenciesTable tbody');
   const emptyState = document.getElementById('recentExigenciesEmpty');
 
@@ -279,6 +279,19 @@ async function loadExigencies() {
 }
 
 document.getElementById('refreshExigenciesBtn').addEventListener('click', loadExigencies);
+
+document.getElementById('exportCsvBtn').addEventListener('click', async () => {
+  const rows = await api('/exigencies');
+  const cols = ['id','school_code','department','critical','location','date_of_incident','issue','immediate_actions','resolved','closure_date','suggested_changes','submitter_email','created_at'];
+  const header = cols.join(',');
+  const escape = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const csv = [header, ...rows.map(r => cols.map(c => escape(r[c])).join(','))].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'exigencies_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+});
 document.getElementById('filterSchool').addEventListener('change', loadExigencies);
 document.getElementById('filterDepartment').addEventListener('change', loadExigencies);
 document.getElementById('filterResolved').addEventListener('change', loadExigencies);
@@ -363,8 +376,14 @@ async function loadSchools() {
             return `
               <tr data-school="${s.code}" data-dept="${dept}">
                 <td data-label="Department">${dept}</td>
-                <td data-label="To"><input class="recipient-to" value="${existing.to_emails || ''}" placeholder="comma-separated emails" required readonly /></td>
-                <td data-label="CC"><input class="recipient-cc" value="${existing.cc_emails || ''}" placeholder="comma-separated emails" readonly /></td>
+                <td data-label="To">
+                  <div class="email-display to-display">${existing.to_emails || ''}</div>
+                  <textarea class="recipient-to" placeholder="comma-separated emails" required style="display:none;width:100%;resize:none;overflow:hidden;min-height:36px">${existing.to_emails || ''}</textarea>
+                </td>
+                <td data-label="CC">
+                  <div class="email-display cc-display">${existing.cc_emails || ''}</div>
+                  <textarea class="recipient-cc" placeholder="comma-separated emails" style="display:none;width:100%;resize:none;overflow:hidden;min-height:36px">${existing.cc_emails || ''}</textarea>
+                </td>
                 <td data-label="" class="row-actions">
                   <button class="edit-recipients-btn">Edit</button>
                   <button class="save-recipients-btn" disabled>Save</button>
@@ -382,10 +401,16 @@ async function loadSchools() {
   document.querySelectorAll('.edit-recipients-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const tr = e.target.closest('tr');
-      tr.querySelector('.recipient-to').readOnly = false;
-      tr.querySelector('.recipient-cc').readOnly = false;
+      tr.querySelector('.to-display').style.display = 'none';
+      tr.querySelector('.cc-display').style.display = 'none';
+      const ta = tr.querySelector('.recipient-to');
+      const tc = tr.querySelector('.recipient-cc');
+      ta.style.display = '';
+      tc.style.display = '';
+      ta.style.height = ta.scrollHeight + 'px';
+      tc.style.height = tc.scrollHeight + 'px';
       tr.querySelector('.save-recipients-btn').disabled = false;
-      tr.querySelector('.recipient-to').focus();
+      ta.focus();
     });
   });
 
@@ -403,8 +428,14 @@ async function loadSchools() {
       setTimeout(() => {
         btn.textContent = 'Save';
         btn.disabled = true;
-        tr.querySelector('.recipient-to').readOnly = true;
-        tr.querySelector('.recipient-cc').readOnly = true;
+        const toVal = tr.querySelector('.recipient-to').value;
+        const ccVal = tr.querySelector('.recipient-cc').value;
+        tr.querySelector('.to-display').textContent = toVal;
+        tr.querySelector('.cc-display').textContent = ccVal;
+        tr.querySelector('.to-display').style.display = '';
+        tr.querySelector('.cc-display').style.display = '';
+        tr.querySelector('.recipient-to').style.display = 'none';
+        tr.querySelector('.recipient-cc').style.display = 'none';
       }, 1500);
     });
   });
