@@ -87,28 +87,75 @@ db.exec(`
     status TEXT,
     message TEXT
   );
+
+  -- Inbound replies to notification/reminder emails, matched back to their
+  -- exigency via the [EXG###] tag embedded in the outgoing email subject.
+  CREATE TABLE IF NOT EXISTS email_replies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_id TEXT NOT NULL,
+    from_name TEXT,
+    from_email TEXT,
+    subject TEXT,
+    body_text TEXT,
+    received_at TEXT NOT NULL,
+    message_id TEXT UNIQUE
+  );
 `);
+
+// Migration: email_replies.from_name didn't exist in earlier versions of this
+// table — add it if missing rather than relying on CREATE TABLE IF NOT EXISTS,
+// which is a no-op once the table already exists on disk.
+const replyColumns = db.prepare("PRAGMA table_info(email_replies)").all().map((c) => c.name);
+if (!replyColumns.includes('from_name')) {
+  db.exec('ALTER TABLE email_replies ADD COLUMN from_name TEXT');
+}
 
 /** Seeds sane defaults + real school/department/recipient data on first run only. */
 function seedDefaults() {
   const defaults = {
-    AdminEmail: '',
+    // Only used for critical system-error alerts (e.g. cron crash) — not
+    // shown to submitters or department recipients.
+    AlertEmail: '',
     DefaultCC: '',
-    OrgDomain: 'fountainheadschools.org',
-    FsGroupEmail: '',
     // TEST MODE: when set, ALL outgoing mail (reminders + new-submission
     // notifications) is redirected to only this address, regardless of the
     // real department recipients. Clear this value to resume real routing.
     ForceRecipientEmail: '',
+    // Master kill-switch: set to 'false' to stop ALL outgoing mail (reminders
+    // and new-submission notices) to everyone, without touching any other
+    // config. Records still save/update normally either way.
+    MailingEnabled: 'true',
+    // The ONE fixed address every outgoing mail comes from, regardless of
+    // who submits the form or which department it's routed to. Admin-only
+    // (via the Settings tab's login) since it affects every email the
+    // system sends. Empty falls back to SMTP_FROM/SMTP_USER from .env.
+    SenderEmail: '',
     ResolvedValue: 'Yes',
     ReminderTriggerHour: '8',
     DashboardTriggerHour: '9',
+    // Days to wait after the closure date (or submission date, if no closure
+    // date) before a reminder email goes out. Set manually in the Settings tab.
+    ReminderDelayDays: '0',
     CriticalColor: '#EA4335',
     ResolvedColor: '#34A853',
-    UnresolvedColor: '#FBBC04'
+    UnresolvedColor: '#FBBC04',
+    // Highest IMAP UID already scanned for replies — the reply watcher only
+    // fetches messages newer than this on each poll.
+    ImapLastUid: '0'
   };
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   Object.entries(defaults).forEach(([key, value]) => insertSetting.run(key, value));
+
+  // One-time migration: AdminEmail was renamed to AlertEmail (clearer name —
+  // it's only used for critical-error alerts). Carry over any existing
+  // value, then drop the old key. OrgDomain/FsGroupEmail's submitter
+  // authorization gate was removed entirely (anyone can now submit), so
+  // those keys are no longer read anywhere — drop them too.
+  const oldAdminEmail = db.prepare("SELECT value FROM settings WHERE key = 'AdminEmail'").get();
+  if (oldAdminEmail) {
+    db.prepare("UPDATE settings SET value = ? WHERE key = 'AlertEmail'").run(oldAdminEmail.value);
+  }
+  db.prepare("DELETE FROM settings WHERE key IN ('AdminEmail', 'OrgDomain', 'FsGroupEmail')").run();
 
   const schoolCount = db.prepare('SELECT COUNT(*) AS c FROM schools').get().c;
   if (schoolCount === 0) {

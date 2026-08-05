@@ -6,9 +6,14 @@
  * Every send attempt is logged (success or failure).
  */
 
+const path = require('path');
 const nodemailer = require('nodemailer');
 const { writeLog } = require('./logService');
 const { getAllSettings } = require('./settingsService');
+
+const LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'images', 'fountainhead-logo.png');
+const LOGO_CID = 'fountainhead-logo';
+const LOGO_ATTACHMENT = { filename: 'fountainhead-logo.png', path: LOGO_PATH, cid: LOGO_CID };
 
 function getTransport() {
   return nodemailer.createTransport({
@@ -20,6 +25,21 @@ function getTransport() {
       pass: process.env.SMTP_PASS
     }
   });
+}
+
+const SENDER_DISPLAY_NAME = 'Exigency Management System';
+
+/**
+ * Builds the "From" header. Settings!SenderEmail (admin-only, editable via
+ * the Settings tab after logging in) is the ONE fixed address every outgoing
+ * mail comes from, regardless of who filled the form or which department it
+ * routes to — falls back to the .env SMTP_FROM/SMTP_USER if not set yet.
+ */
+function getFromHeader() {
+  const settings = getAllSettings();
+  const email = String(settings.SenderEmail || '').trim() || process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (email.includes('<')) return email;
+  return `${SENDER_DISPLAY_NAME} <${email}>`;
 }
 
 function escapeHtml(value) {
@@ -48,17 +68,101 @@ function fmtDate(iso) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function statusPillStyle(color) {
-  return `display:inline-block;padding:2px 10px;border-radius:12px;background:${color};color:#ffffff;font-size:12px;font-weight:600;`;
+/**
+ * Fountainhead brand system (Brand Guidelines 2025): primary blue #005BAA,
+ * red #B8292F, yellow accent #F2C418, used at a 45/45/10 ratio. Montserrat
+ * for headline/wordmark text, Nunito for body — both declared with safe
+ * fallback stacks since most email clients ignore @font-face/webfonts.
+ */
+const BRAND = {
+  blue: '#005BAA',
+  blueDeep: '#003c73',
+  red: '#B8292F',
+  yellow: '#F2C418',
+  tintBlue: '#eef4fa',
+  ink: '#1a2230',
+  sub: '#5b6472',
+  headFont: "'Montserrat','Segoe UI',Arial,sans-serif",
+  bodyFont: "'Nunito','Segoe UI',Arial,sans-serif"
+};
+
+/**
+ * The stored value is usually a link to this module's own /api/report
+ * gallery endpoint. Rendering it as raw escaped URL text is useless to
+ * anyone reading the email off the sender's machine — render it as a
+ * plain "View attachment" link instead so it at least reads cleanly,
+ * even though the link itself only resolves on networks that can reach
+ * this module (localhost or wherever it's tunnelled/hosted).
+ */
+function formatAttachmentsLink(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return 'N/A';
+  if (/^https?:\/\//i.test(trimmed)) {
+    return `<a href="${escapeHtml(trimmed)}" style="color:${BRAND.blue};">View attachment</a>`;
+  }
+  return escapeHtml(trimmed);
+}
+
+function badgePill(text, bg) {
+  return `<span style="display:inline-block;padding:2px 10px;border-radius:100px;background:${bg};color:#ffffff;font-size:11.5px;font-weight:700;font-family:${BRAND.headFont};">${escapeHtml(text)}</span>`;
+}
+
+/**
+ * Shared letterhead header used by every outgoing email: the real
+ * Fountainhead logo on white (the logo's own blue/red would disappear on a
+ * blue band), embedded as a CID attachment (see LOGO_ATTACHMENT) so it
+ * always renders regardless of whether the module is reachable from the
+ * recipient's network — then the brand's own 45/45/10 colour-proportion
+ * chart rendered as a thin rule directly beneath it.
+ * @param {string} title
+ * @param {string} subtitle
+ * @return {string}
+ */
+function brandMasthead(title, subtitle) {
+  return `
+  <tr>
+    <td colspan="2" style="background:#ffffff;padding:22px 26px 18px;">
+      <img src="cid:${LOGO_CID}" alt="Fountainhead" height="48" style="height:48px;width:auto;display:block;margin-bottom:14px;" />
+      <div style="font-family:${BRAND.headFont};color:${BRAND.blue};font-size:20px;font-weight:800;">${escapeHtml(title)}</div>
+      ${subtitle ? `<div style="font-family:${BRAND.bodyFont};color:${BRAND.sub};font-size:13px;margin-top:3px;">${subtitle}</div>` : ''}
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="padding:0;">
+      <table cellspacing="0" cellpadding="0" width="100%"><tr>
+        <td width="45%" style="height:5px;background:${BRAND.blue};font-size:0;line-height:0;">&nbsp;</td>
+        <td width="45%" style="height:5px;background:${BRAND.red};font-size:0;line-height:0;">&nbsp;</td>
+        <td width="10%" style="height:5px;background:${BRAND.yellow};font-size:0;line-height:0;">&nbsp;</td>
+      </tr></table>
+    </td>
+  </tr>`;
+}
+
+/** Shared footer band, closes out every outgoing email. */
+function brandFooter() {
+  return '';
+}
+
+/**
+ * Renders a label/value field table with the brand's alternating-tint rows
+ * and blue label column. @param {Array<[string, string]>} rows
+ */
+function brandFieldTable(rows) {
+  const labelStyle = `padding:10px 16px;font-family:${BRAND.headFont};font-size:12.5px;font-weight:700;width:42%;color:${BRAND.blue};vertical-align:top;`;
+  const valueStyle = `padding:10px 16px;font-family:${BRAND.bodyFont};font-size:13.5px;vertical-align:top;color:${BRAND.ink};`;
+  return rows.map(([label, value], i) => `
+    <tr style="${i % 2 === 0 ? '' : `background:${BRAND.tintBlue};`}">
+      <td style="${labelStyle}">${escapeHtml(label)}</td>
+      <td style="${valueStyle}">${value}</td>
+    </tr>`).join('');
 }
 
 /**
  * If Settings!ForceRecipientEmail is set (comma-separated, one or more
- * addresses), every outgoing mail (reminder AND new-submission notification)
- * is redirected to ONLY those addresses — real department/CC recipients are
- * computed as normal upstream but replaced here, so switching this off later
- * requires no other code change. The originally intended recipients are
- * preserved in the log message for visibility.
+ * addresses), those addresses are ADDED to every outgoing mail (reminder
+ * AND new-submission notification) alongside the real department/CC
+ * recipients — everyone still gets it, this just guarantees the forced
+ * addresses are also copied in.
  * @param {Array<string>} to
  * @param {Array<string>} cc
  * @return {{to: Array<string>, cc: Array<string>, overridden: boolean, originalTo: Array<string>, originalCc: Array<string>}}
@@ -68,81 +172,75 @@ function applyRecipientOverride(to, cc) {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+  const originalTo = to || [];
+  const originalCc = cc || [];
   if (forceEmails.length === 0) {
-    return { to: to || [], cc: cc || [], overridden: false, originalTo: to || [], originalCc: cc || [] };
+    return { to: originalTo, cc: originalCc, overridden: false, originalTo, originalCc };
   }
-  return { to: forceEmails, cc: [], overridden: true, originalTo: to || [], originalCc: cc || [] };
+  const mergedTo = Array.from(new Set([...originalTo, ...forceEmails]));
+  return { to: mergedTo, cc: originalCc, overridden: true, originalTo, originalCc };
 }
 
-function buildHtmlEmail(record, appUrl) {
-  const settings = getAllSettings();
-  const resolvedColor = settings.ResolvedColor || '#34A853';
-  const unresolvedColor = settings.UnresolvedColor || '#FBBC04';
-  const criticalColor = settings.CriticalColor || '#EA4335';
+function buildHtmlEmail(record, appUrl, customMessage) {
   const resolved = record.resolved || 'No';
-  const statusColor = resolved === 'Yes' ? resolvedColor : unresolvedColor;
   const pendingSince = daysBetween(record.created_at);
 
   const rows = [
-    ['Exigency ID', escapeHtml(record.id)],
-    ['School', escapeHtml(record.school_code)],
+    ['Form Number', escapeHtml(record.id)],
+    ['School Selection', escapeHtml(record.school_raw || record.school_code)],
     ['Department', escapeHtml(record.department)],
-    ['Critical', record.critical
-      ? `<span style="${statusPillStyle(criticalColor)}">CRITICAL</span>`
-      : 'No'],
-    ['Location', escapeHtml(record.location)],
-    ['Issue', escapeHtml(record.issue)],
-    ['Immediate Actions Taken', escapeHtml(record.immediate_actions) || 'N/A'],
+    ['Is this a Critical Issue?', record.critical ? badgePill('CRITICAL', BRAND.red) : 'No'],
+    ['Location', escapeHtml(record.location) || 'N/A'],
+    ['Describe the Incident', escapeHtml(record.issue) || 'N/A'],
+    ['What immediate actions were taken?', escapeHtml(record.immediate_actions) || 'N/A'],
     ['Reported Date', fmtDate(record.created_at)],
     ['Pending Since', `${pendingSince} day${pendingSince === 1 ? '' : 's'}`],
-    ['Expected Closure Date', fmtDate(record.closure_date)],
-    ['Resolved', `<span style="${statusPillStyle(statusColor)}">${escapeHtml(resolved)}</span>`]
+    ['If NOT RESOLVED, please specify the closure date.', fmtDate(record.closure_date)],
+    ['Has the issue been resolved?', resolved === 'Yes' ? badgePill('RESOLVED', BRAND.blueDeep) : badgePill('NOT RESOLVED', BRAND.red)]
   ];
 
-  const tableRows = rows.map(([label, value]) => `
-    <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #e8eaed;color:#5f6368;font-weight:600;width:38%;background:#fafafa;">${label}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #e8eaed;color:#202124;">${value}</td>
-    </tr>`).join('');
-
-  const timestamp = new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-
   return `
-<div style="margin:0;padding:0;background-color:#f1f3f4;font-family:Roboto,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f3f4;padding:24px 0;">
+<div style="margin:0;padding:0;background-color:#f4f6fa;font-family:${BRAND.bodyFont};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa;padding:24px 0;">
     <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
-        <tr><td style="background:${record.critical ? criticalColor : '#1a73e8'};padding:20px 24px;">
-          <span style="color:#ffffff;font-size:20px;font-weight:700;">Exigency Management System</span><br/>
-          <span style="color:#e8f0fe;font-size:13px;">${escapeHtml(record.school_code)} &middot; ${escapeHtml(record.department)}</span>
-        </td></tr>
-        <tr><td style="padding:20px 24px 4px 24px;">
-          <p style="margin:0 0 12px 0;font-size:15px;color:#202124;">
-            The exigency below is <strong>unresolved</strong> and requires your action.
+      <table role="presentation" width="100%" style="max-width:620px;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
+        ${brandMasthead(resolved === 'Yes' ? 'Status Update' : 'Action Required', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`)}
+        <tr><td colspan="2" style="padding:16px 26px 4px;">
+          <p style="margin:0 0 8px 0;font-family:${BRAND.bodyFont};font-size:14.5px;color:${BRAND.ink};">
+            ${resolved === 'Yes'
+              ? 'The exigency below has been marked <strong>resolved</strong>.'
+              : 'The exigency below is <strong>unresolved</strong> and requires your action.'}
           </p>
+          ${customMessage ? `<p style="margin:0 0 8px 0;padding:10px 14px;background:${BRAND.tintBlue};border-left:3px solid ${BRAND.blue};font-family:${BRAND.bodyFont};font-size:14px;color:${BRAND.ink};">${escapeHtml(customMessage)}</p>` : ''}
         </td></tr>
-        <tr><td style="padding:0 24px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
-            ${tableRows}
+        <tr><td colspan="2" style="padding:0 12px 24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            ${brandFieldTable(rows)}
           </table>
         </td></tr>
-        <tr><td style="padding:24px;">
-          <a href="${appUrl}" style="display:inline-block;background:#1a73e8;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:4px;font-size:14px;font-weight:600;">
-            Open Dashboard
-          </a>
-        </td></tr>
-        <tr><td style="background:#f8f9fa;padding:14px 24px;border-top:1px solid #e8eaed;">
-          <p style="margin:0;font-size:11px;color:#5f6368;">
-            Automated reminder generated by the Exigency Management System &middot; ${timestamp}
-          </p>
-        </td></tr>
+        ${brandFooter()}
       </table>
     </td></tr>
   </table>
 </div>`;
 }
 
-async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUrl) {
+/**
+ * Master kill-switch: when Settings!MailingEnabled is explicitly 'false',
+ * no mail goes out to anyone at all (reminders or new-submission notices).
+ * Records are still saved/updated normally — only the email send is skipped.
+ * @return {boolean}
+ */
+function isMailingEnabled() {
+  return String(getAllSettings().MailingEnabled ?? 'true').trim().toLowerCase() !== 'false';
+}
+
+async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUrl, customMessage) {
+  if (!isMailingEnabled()) {
+    writeLog({ recordId: record.id, type: reminderType, status: 'SKIPPED', message: 'Mailing is disabled (Settings!MailingEnabled=false).' });
+    return false;
+  }
+
   const settings = getAllSettings();
   const ccFallback = (ccEmails && ccEmails.length ? ccEmails : String(settings.DefaultCC || '').split(',').map((s) => s.trim()).filter(Boolean));
   const { to: recipients, cc, overridden, originalTo } = applyRecipientOverride(toEmails, ccFallback);
@@ -152,16 +250,17 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
     return false;
   }
 
-  const overrideNote = overridden ? ` [TEST MODE: originally intended for ${originalTo.join(', ') || 'nobody'}]` : '';
+  const overrideNote = overridden ? ` [+CC: also sent to ForceRecipientEmail list]` : '';
 
   try {
     const transport = getTransport();
     await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: getFromHeader(),
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `[Exigency Reminder] ${record.id} - ${record.school_code} - Action Required`,
-      html: buildHtmlEmail(record, appUrl)
+      subject: `Reminder : Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
+      html: buildHtmlEmail(record, appUrl, customMessage),
+      attachments: [LOGO_ATTACHMENT]
     });
     writeLog({ recordId: record.id, recipient: recipients.join(','), type: reminderType, status: 'SUCCESS', message: 'Reminder email sent.' + overrideNote });
     return true;
@@ -172,51 +271,38 @@ async function sendReminderEmail(record, toEmails, ccEmails, reminderType, appUr
 }
 
 /**
- * Builds the field/value HTML table for a brand-new submission, matching
- * the exact visual style of the original Apps Script MakeHTMLTable()
- * function: green header row (rgb(139,195,74)), alternating white /
- * rgb(238,247,227) data rows, collapsed borders, Arial 10pt, fixed layout.
+ * Builds the "Guide & Spark" branded field/value table for a brand-new
+ * submission — Fountainhead brand colours (#005BAA blue, #B8292F red,
+ * #F2C418 yellow accent) and the guideline's own 45/45/10 colour-proportion
+ * chart, rendered as a bar under the header.
  * @param {Object} record
  * @return {string}
  */
 function buildSubmissionTableHtml(record) {
-  const fields = [
-    ['Exigency ID', record.id],
-    ['School', record.school_code],
-    ['Department', record.department],
-    ['Critical Issue', record.critical ? 'Yes' : 'No'],
-    ['Location', record.location],
-    ['Date of Incident', fmtDate(record.date_of_incident)],
-    ['Describe the Incident', record.issue],
-    ['Immediate Actions Taken', record.immediate_actions],
-    ['Attachments', record.attachments],
-    ['Has the issue been resolved?', record.resolved],
-    ['Expected Closure Date', fmtDate(record.closure_date)],
-    ['Suggested Policy/Process Change', record.suggested_changes],
-    ['Submitted By', record.submitter_email],
-    ['Timestamp', fmtDate(record.created_at)]
+  const resolved = record.resolved || 'No';
+  const rows = [
+    ['Form Number', escapeHtml(record.id)],
+    ['Timestamp', fmtDate(record.created_at)],
+    ['Form Filled by', escapeHtml(record.submitter_email)],
+    ['School Selection', escapeHtml(record.school_raw || record.school_code)],
+    ['Date of the Incident', fmtDate(record.date_of_incident)],
+    ['Location', escapeHtml(record.location) || 'N/A'],
+    ['Department', escapeHtml(record.department)],
+    ['Is this a Critical Issue?', record.critical ? badgePill('CRITICAL', BRAND.red) : 'No'],
+    ['Describe the Incident', escapeHtml(record.issue) || 'N/A'],
+    ['Photos/videos/documents', formatAttachmentsLink(record.attachments)],
+    ['What immediate actions were taken?', escapeHtml(record.immediate_actions) || 'N/A'],
+    ['Has the issue been resolved?', resolved === 'Yes' ? badgePill('RESOLVED', BRAND.blueDeep) : badgePill('NOT RESOLVED', BRAND.red)],
+    ['If NOT RESOLVED, please specify the closure date.', fmtDate(record.closure_date)],
+    ['Any suggested Policy, Training, Infra, Services or Process change required?', escapeHtml(record.suggested_changes) || 'N/A']
   ];
 
-  const headerCellStyle = 'overflow:hidden;padding:2px 3px;vertical-align:bottom;background-color:rgb(139,195,74);font-weight:bold;color:#ffffff;';
-  const whiteCellStyle = 'overflow:hidden;padding:4px 6px;vertical-align:top;';
-  const greenCellStyle = 'overflow:hidden;padding:4px 6px;vertical-align:top;background-color:rgb(238,247,227);';
-
-  const headerRow = `<tr style="height:21px;">
-    <td style="${headerCellStyle}width:220px;">Field</td>
-    <td style="${headerCellStyle}">Value</td>
-  </tr>`;
-
-  const dataRows = fields.map(([label, value], i) => {
-    const cellStyle = i % 2 === 0 ? whiteCellStyle : greenCellStyle;
-    return `<tr style="height:21px;">
-      <td style="${cellStyle}font-weight:bold;">${escapeHtml(label)}</td>
-      <td style="${cellStyle}">${escapeHtml(value) || 'N/A'}</td>
-    </tr>`;
-  }).join('');
-
-  return `<table cellspacing="0" cellpadding="0" dir="ltr" border="1" ` +
-    `style="table-layout:fixed;font-size:10pt;font-family:arial,sans,sans-serif;width:100%;max-width:640px;border-collapse:collapse;border:1px solid #ccc;">` +
-    `<tbody>${headerRow}${dataRows}</tbody></table>`;
+  return `
+<table cellspacing="0" cellpadding="0" width="100%" style="max-width:620px;border-collapse:collapse;background:#ffffff;border-radius:10px;overflow:hidden;">
+  ${brandMasthead('New Exigency Reported', `${escapeHtml(record.school_raw || record.school_code)} &middot; ${escapeHtml(record.department)}`)}
+  ${brandFieldTable(rows)}
+  ${brandFooter()}
+</table>`;
 }
 
 /**
@@ -230,6 +316,11 @@ function buildSubmissionTableHtml(record) {
  * @return {Promise<boolean>}
  */
 async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
+  if (!isMailingEnabled()) {
+    writeLog({ recordId: record.id, type: 'NEW_SUBMISSION', status: 'SKIPPED', message: 'Mailing is disabled (Settings!MailingEnabled=false).' });
+    return false;
+  }
+
   const { to: recipients, cc, overridden, originalTo } = applyRecipientOverride(toEmails, ccEmails);
 
   if (recipients.length === 0) {
@@ -237,26 +328,24 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
     return false;
   }
 
-  const overrideNote = overridden ? ` [TEST MODE: originally intended for ${originalTo.join(', ') || 'nobody'}]` : '';
+  const overrideNote = overridden ? ` [+CC: also sent to ForceRecipientEmail list]` : '';
   const criticalPrefix = record.critical ? '[CRITICAL] ' : '';
   const html = `
-    <div style="font-family:arial,sans,sans-serif;">
-      <p style="font-size:11pt;">A new exigency has been reported for <strong>${escapeHtml(record.school_code)}</strong>
-      (${escapeHtml(record.department)}). Details below:</p>
-      ${buildSubmissionTableHtml(record)}
-      <p style="font-size:10pt;margin-top:14px;">
-        <a href="${appUrl}" style="color:#1a73e8;">Open the Exigency Management dashboard</a>
-      </p>
+    <div style="background:#f4f6fa;padding:24px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+        ${buildSubmissionTableHtml(record)}
+      </td></tr></table>
     </div>`;
 
   try {
     const transport = getTransport();
     await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: getFromHeader(),
       to: recipients.join(','),
       cc: cc.join(','),
-      subject: `${criticalPrefix}New Exigency Reported: ${record.id} - ${record.school_code} - ${record.department}`,
-      html
+      subject: `${criticalPrefix}Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
+      html,
+      attachments: [LOGO_ATTACHMENT]
     });
     writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'NEW_SUBMISSION', status: 'SUCCESS', message: 'New submission notification sent.' + overrideNote });
     return true;
@@ -266,14 +355,54 @@ async function sendNewSubmissionEmail(record, toEmails, ccEmails, appUrl) {
   }
 }
 
+/**
+ * Sends a resolution-update notification on the same [id]-tagged thread as
+ * the original reminder/new-submission mail (see RECORD_TAG_RE in
+ * replyService.js), reusing buildHtmlEmail so the RESOLVED/NOT RESOLVED
+ * badge reflects the record's current state. Fired on-demand from the
+ * dashboard when a user confirms sending it after marking Resolved = Yes.
+ */
+async function sendStatusUpdateEmail(record, toEmails, ccEmails, appUrl) {
+  if (!isMailingEnabled()) {
+    writeLog({ recordId: record.id, type: 'STATUS_UPDATE', status: 'SKIPPED', message: 'Mailing is disabled (Settings!MailingEnabled=false).' });
+    return false;
+  }
+
+  const { to: recipients, cc, overridden } = applyRecipientOverride(toEmails, ccEmails);
+
+  if (recipients.length === 0) {
+    writeLog({ recordId: record.id, type: 'STATUS_UPDATE', status: 'SKIPPED', message: 'No recipients resolved.' });
+    return false;
+  }
+
+  const overrideNote = overridden ? ` [+CC: also sent to ForceRecipientEmail list]` : '';
+
+  try {
+    const transport = getTransport();
+    await transport.sendMail({
+      from: getFromHeader(),
+      to: recipients.join(','),
+      cc: cc.join(','),
+      subject: `Update : Exigency [${record.id}] - ${record.school_raw || record.school_code} - ${record.department}`,
+      html: buildHtmlEmail(record, appUrl),
+      attachments: [LOGO_ATTACHMENT]
+    });
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'STATUS_UPDATE', status: 'SUCCESS', message: 'Status update email sent.' + overrideNote });
+    return true;
+  } catch (error) {
+    writeLog({ recordId: record.id, recipient: recipients.join(','), type: 'STATUS_UPDATE', status: 'FAILURE', message: 'Mail send failed: ' + error.message + overrideNote });
+    return false;
+  }
+}
+
 async function sendCriticalErrorEmail(context, error) {
   const settings = getAllSettings();
-  const adminEmail = settings.AdminEmail;
+  const adminEmail = settings.AlertEmail;
   if (!adminEmail) return;
   try {
     const transport = getTransport();
     await transport.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: getFromHeader(),
       to: adminEmail,
       subject: '[Exigency Management System] Critical Error',
       html: `<p><strong>Context:</strong> ${escapeHtml(context)}</p><p><strong>Error:</strong> ${escapeHtml(error.message || String(error))}</p>`
@@ -283,4 +412,4 @@ async function sendCriticalErrorEmail(context, error) {
   }
 }
 
-module.exports = { sendReminderEmail, sendNewSubmissionEmail, sendCriticalErrorEmail, buildHtmlEmail, buildSubmissionTableHtml };
+module.exports = { sendReminderEmail, sendNewSubmissionEmail, sendStatusUpdateEmail, sendCriticalErrorEmail, buildHtmlEmail, buildSubmissionTableHtml };

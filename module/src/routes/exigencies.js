@@ -8,13 +8,29 @@ const express = require('express');
 const db = require('../db');
 const { writeLog } = require('../services/logService');
 const { createUniqueId } = require('../services/idService');
-const { resolveSchoolCode, resolveDepartment } = require('../services/settingsService');
+const { resolveSchoolCode, resolveDepartment, getDepartmentRecipients } = require('../services/settingsService');
+const { sendStatusUpdateEmail, sendReminderEmail } = require('../services/emailService');
+const { requireAdmin } = require('../services/authService');
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
 
 const router = express.Router();
 
+// Exigency records contain submitter PII and incident details — every route
+// here is admin-only (the public report form submits through /api/report
+// instead, which stays open).
+router.use(requireAdmin);
+
 router.get('/', (req, res) => {
   const { school, department, resolved, critical } = req.query;
-  let sql = 'SELECT * FROM exigencies WHERE 1=1';
+  let sql = `
+    SELECT e.*,
+      (SELECT COUNT(*) FROM email_replies r WHERE r.record_id = e.id) AS reply_count,
+      (SELECT body_text FROM email_replies r WHERE r.record_id = e.id ORDER BY received_at DESC LIMIT 1) AS last_reply_text,
+      (SELECT MAX(received_at) FROM email_replies r WHERE r.record_id = e.id) AS last_reply_at
+    FROM exigencies e WHERE 1=1`;
   const params = [];
   if (school) { sql += ' AND school_code = ?'; params.push(school); }
   if (department) { sql += ' AND department = ?'; params.push(department); }
@@ -28,6 +44,11 @@ router.get('/:id', (req, res) => {
   const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id);
   if (!record) return res.status(404).json({ error: 'Not found' });
   res.json(record);
+});
+
+router.get('/:id/replies', (req, res) => {
+  const replies = db.prepare('SELECT * FROM email_replies WHERE record_id = ? ORDER BY received_at ASC').all(req.params.id);
+  res.json(replies);
 });
 
 /**
@@ -66,6 +87,53 @@ router.patch('/:id', (req, res) => {
   writeLog({ recordId: req.params.id, type: 'SYNC', status: 'INFO', message: 'Record updated: ' + fields.join(', ') });
 
   res.json(db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id));
+});
+
+/**
+ * Sends a resolution-update email to the same people who received the
+ * original notification for this record (department recipients + the
+ * submitter), reflecting whatever the record's current `resolved` state
+ * is. Triggered on-demand from the dashboard, not automatically on PATCH —
+ * the user confirms first via a popup.
+ */
+router.post('/:id/notify-status', async (req, res) => {
+  const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id);
+  if (!record) return res.status(404).json({ error: 'Not found' });
+
+  const recipients = getDepartmentRecipients(record.school_code, record.department);
+  const to = recipients.to.filter(isValidEmail);
+  const cc = [...recipients.cc, record.submitter_email].filter(isValidEmail);
+
+  const appUrl = `${req.protocol}://${req.get('host')}`;
+  const sent = await sendStatusUpdateEmail(record, to, cc, appUrl);
+
+  res.json({ sent });
+});
+
+/**
+ * Sends this one record's reminder email right now, to its real department
+ * recipients (same routing/override rules as the daily job), and stamps
+ * last_reminder_date/reminder_count exactly like runDailyReminderJob would —
+ * so the daily cron doesn't double-send it later today.
+ */
+router.post('/:id/remind-now', async (req, res) => {
+  const record = db.prepare('SELECT * FROM exigencies WHERE id = ?').get(req.params.id);
+  if (!record) return res.status(404).json({ error: 'Not found' });
+
+  const recipients = getDepartmentRecipients(record.school_code, record.department);
+  const to = recipients.to.filter(isValidEmail);
+  const cc = recipients.cc.filter(isValidEmail);
+
+  const appUrl = `${req.protocol}://${req.get('host')}`;
+  const customMessage = (req.body && req.body.message) ? String(req.body.message).trim() : '';
+  const sent = await sendReminderEmail(record, to, cc, 'MANUAL_REMINDER', appUrl, customMessage);
+
+  if (sent) {
+    db.prepare('UPDATE exigencies SET last_reminder_date = ?, reminder_count = reminder_count + 1 WHERE id = ?')
+      .run(new Date().toISOString(), req.params.id);
+  }
+
+  res.json({ sent });
 });
 
 router.post('/', (req, res) => {

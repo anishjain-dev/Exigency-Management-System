@@ -36,7 +36,7 @@ function setSettings(entries) {
 }
 
 function getSchools() {
-  return db.prepare('SELECT code, name FROM schools ORDER BY code').all();
+  return db.prepare('SELECT code, name FROM schools ORDER BY rowid DESC').all();
 }
 
 function upsertSchool(code, name) {
@@ -49,11 +49,38 @@ function upsertSchool(code, name) {
 }
 
 function getDepartments() {
-  return db.prepare('SELECT name FROM departments ORDER BY name').all().map((r) => r.name);
+  return db.prepare('SELECT name FROM departments ORDER BY rowid DESC').all().map((r) => r.name);
 }
 
 function upsertDepartment(name) {
   db.prepare('INSERT OR IGNORE INTO departments (name) VALUES (?)').run(String(name).trim());
+}
+
+function countExigenciesForSchool(code) {
+  return db.prepare('SELECT COUNT(*) c FROM exigencies WHERE school_code = ?').get(code).c;
+}
+
+function countExigenciesForDepartment(name) {
+  return db.prepare('SELECT COUNT(*) c FROM exigencies WHERE department = ?').get(name).c;
+}
+
+function deleteSchool(code) {
+  db.prepare('DELETE FROM department_recipients WHERE school_code = ?').run(code);
+  db.prepare('DELETE FROM schools WHERE code = ?').run(code);
+}
+
+function deleteDepartment(name) {
+  db.prepare('DELETE FROM department_recipients WHERE department = ?').run(name);
+  db.prepare('DELETE FROM departments WHERE name = ?').run(name);
+}
+
+function renameDepartment(oldName, newName) {
+  const trimmedNew = String(newName).trim();
+  db.prepare('UPDATE OR IGNORE departments SET name = ? WHERE name = ?').run(trimmedNew, oldName);
+  db.prepare('DELETE FROM departments WHERE name = ?').run(oldName);
+  db.prepare('UPDATE OR IGNORE department_recipients SET department = ? WHERE department = ?').run(trimmedNew, oldName);
+  db.prepare('DELETE FROM department_recipients WHERE department = ?').run(oldName);
+  return trimmedNew;
 }
 
 /** Returns the exact school code as stored, matching case-insensitively. */
@@ -145,5 +172,10 @@ module.exports = {
   isKnownSchool,
   getDepartmentRecipients,
   getAllDepartmentRecipients,
+  countExigenciesForSchool,
+  countExigenciesForDepartment,
+  deleteSchool,
+  deleteDepartment,
+  renameDepartment,
   upsertDepartmentRecipients
 };

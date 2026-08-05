@@ -1,0 +1,278 @@
+:root {
+  --blue: #005BAA;
+  --blue-deep: #003c73;
+  --red: #B8292F;
+  --yellow: #F2C418;
+  --bg: #f4f6fa;
+  --card: #ffffff;
+  --ink: #1a2230;
+  --sub: #5b6472;
+  --border: #dde3ec;
+  --tint: #eef4fa;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Nunito', 'Segoe UI', Arial, sans-serif;
+}
+
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+.masthead {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 26px 28px 20px;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.masthead-logo {
+  height: 72px;
+  width: auto;
+  display: block;
+  margin-bottom: 18px;
+}
+
+.masthead h1 {
+  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  margin: 0 0 6px;
+  color: var(--blue);
+}
+
+.masthead .subtitle {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--sub);
+  line-height: 1.5;
+  max-width: 52ch;
+}
+
+.intro-text {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.intro-text p { margin: 0 0 12px; }
+.intro-text p:last-child { margin-bottom: 0; }
+.intro-text strong { color: var(--ink); }
+.intro-text ul { margin: 0 0 12px; padding-left: 20px; }
+.intro-text li { margin-bottom: 6px; }
+
+.proportion-bar {
+  display: flex;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 18px;
+}
+.proportion-bar .blue { width: 45%; background: var(--blue); }
+.proportion-bar .red { width: 45%; background: var(--red); }
+.proportion-bar .yellow { width: 10%; background: var(--yellow); }
+
+/* Google-style: each question in its own white card, grey bg gap between */
+.report-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.q-card {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.g-required-note {
+  margin: -4px 0 0;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+/* ---------- Google-style account block (mirrors the Google Form) ---------- */
+#gAccountBlock { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+#gAccountBlock[hidden] { display: none; }
+.g-account-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.g-account-lines { display: flex; flex-direction: row; align-items: baseline; flex-wrap: nowrap; gap: 14px; min-width: 0; }
+.g-account-email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-switch { white-space: nowrap; }
+.g-account-email { font-size: 14px; font-weight: 700; color: #202124; font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; }
+.g-switch { background: none; border: none; color: #1a73e8; font-size: 13px; font-weight: 500; cursor: pointer; padding: 0; }
+.g-switch:hover { text-decoration: underline; }
+.g-cloud { width: 22px; height: 22px; fill: #5f6368; flex-shrink: 0; }
+.g-notice { margin: 0; font-size: 12px; color: #70757a; line-height: 1.5; font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; }
+.g-notice-link { color: #1a73e8; }
+
+.g-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 0; }
+.g-required-note { font-size: 12.5px; color: var(--red); font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; margin: 0; }
+.g-required-note .req { margin-right: 2px; }
+
+.g-email-record { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 400; color: #202124; cursor: default; font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; }
+.g-email-record input[type="checkbox"] { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--blue); cursor: default; }
+.g-email-record strong { font-weight: 700; }
+
+label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--blue);
+  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+}
+.req { color: var(--red); }
+
+.field-help {
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--sub);
+  line-height: 1.5;
+  margin: 0;
+}
+.field-help p { margin: 0 0 8px; }
+.field-help p:last-child { margin-bottom: 0; }
+.field-help ul { margin: 0 0 8px; padding-left: 18px; }
+.field-help ul:last-child { margin-bottom: 0; }
+.field-help li { margin-bottom: 4px; }
+.field-help strong { font-style: normal; color: var(--ink); }
+
+input, select, textarea {
+  font-family: 'Nunito', 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fbfcfe;
+  color: var(--ink);
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ---------- Custom dropdown (School / Department) ---------- */
+/* Native <select> always shows the current value twice (closed box +
+   highlighted in the open list) — this avoids that entirely. */
+
+.custom-select { position: relative; }
+
+.custom-select-trigger {
+  width: 100%;
+  text-align: left;
+  font-family: 'Nunito', 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fbfcfe url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b6472'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 12px center;
+  background-size: 18px;
+  color: var(--sub);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.custom-select-trigger.has-value { color: var(--ink); }
+.custom-select-trigger:focus, .custom-select-trigger[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0,91,170,0.15);
+}
+.custom-select-trigger.invalid { border-color: var(--red); }
+
+.custom-select-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.custom-select-option {
+  padding: 10px 13px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.custom-select-option:hover,
+.custom-select-option.highlighted { background: var(--tint); }
+.custom-select-option.selected { background: var(--blue); color: #ffffff; }
+
+select { cursor: pointer; }
+
+.file-input-wrap input[type="file"] {
+  font-size: 13.5px;
+  color: var(--ink);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  box-shadow: none;
+}
+.file-input-wrap:hover {
+  border-color: var(--blue);
+  background: var(--tint);
+}
+
+/* ---------- Radio group (Department) ---------- */
+.radio-group { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.radio-option { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink); cursor: pointer; }
+.radio-option input[type="radio"] { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: var(--blue); }
+.radio-group.invalid .radio-option { color: var(--red); }
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0,91,170,0.15);
+}
+
+.btn-submit {
+  align-self: flex-start;
+  background: var(--red);
+  color: #ffffff;
+  border: none;
+  padding: 13px 30px;
+  border-radius: 8px;
+  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(184,41,47,0.25);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.btn-submit:hover { background: #9d2229; }
+.btn-submit:active { transform: translateY(1px); }
+.btn-submit:disabled { opacity: 0.6; cursor: default; box-shadow: none; }
+
+@media (max-width: 560px) {
+  .btn-submit { align-self: stretch; }
+}
+
+.form-message {
+  font-size: 13.5px;
+  min-height: 18px;
+}
+.form-message.success { color: #1f7a3d; font-weight: 700; }
+.form-message.error { color: var(--red); font-weight: 700; }
+
+@media (max-width: 560px) {
+  .row2 { grid-template-columns: 1fr; }
+}

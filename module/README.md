@@ -1,30 +1,27 @@
 # Exigency Management Module (Standalone, No Google Sheets)
 
 A self-contained Node.js + Express + SQLite version of the Exigency
-Management System. Google Form stays as the submission entry point, but all
-data now lives in a local SQLite database instead of Google Sheets. Runs
-entirely on `localhost` — no Google Sheets, no Apps Script sync logic beyond
-a single lightweight webhook forwarder.
+Management System. Submissions come in through the module's own built-in
+form (served at `/report.html`) — no Google Form, Apps Script, or tunnel
+needed. All data lives in a local SQLite database.
 
 ## Architecture
 
 ```
-Google Form (submission only)
-        │  Apps Script installable trigger (AppsScriptWebhook.gs)
+Built-in report form (public/report.html)
+        │
         ▼
-   ngrok tunnel (forwards public URL -> your localhost)
-        ▼
-POST /api/webhook/form-submit  ──────────────┐
-        │                                     │
-        ▼                                     │
-   SQLite database (data/exigency.db)         │
-   - exigencies                                │
-   - schools / school_users                    │
-   - settings                                  │
-   - logs                                       │
-        │                                      │
-        ▼                                      │
-   Express API (/api/*)  ◄───────────────────────┘
+POST /api/report/submit  ──────────────┐
+        │                               │
+        ▼                               │
+   SQLite database (data/exigency.db)   │
+   - exigencies                          │
+   - schools / department_recipients     │
+   - settings                            │
+   - logs                                │
+        │                                │
+        ▼                                │
+   Express API (/api/*)  ◄────────────────┘
         │
         ▼
    Dashboard UI (public/index.html + app.js)
@@ -32,7 +29,7 @@ POST /api/webhook/form-submit  ──────────────┐
    - manage schools & recipients
    - edit settings
    - view logs
-   - trigger reminder job manually
+   - trigger reminder job manually (all unresolved, or a hand-picked selection)
 
    node-cron: daily reminder job at Settings.ReminderTriggerHour
         │
@@ -48,9 +45,7 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env`:
-- `WEBHOOK_SECRET` — any random string (this guards the webhook endpoint).
-- `SMTP_*` — real SMTP credentials (e.g. a Gmail address + [App Password](https://myaccount.google.com/apppasswords)).
+Edit `.env` with real `SMTP_*` credentials (e.g. a Gmail address + [App Password](https://myaccount.google.com/apppasswords)).
 
 ## 2. Run
 
@@ -59,64 +54,40 @@ npm start
 ```
 
 Open **http://localhost:4000** — you should see the dashboard (empty at first).
+Submissions are made at **http://localhost:4000/report.html**.
 
-## 3. Expose it to the internet (so Google Forms can reach it)
+## 3. Configure Settings
 
-Google's servers cannot call `http://localhost:4000` directly. Use a tunnel:
-
-```bash
-# Install ngrok once: https://ngrok.com/download
-ngrok http 4000
-```
-
-Copy the `https://xxxx.ngrok-free.app` URL it prints — this changes every
-time you restart ngrok on the free tier.
-
-## 4. Wire up the Google Form
-
-1. Open the Google Form in the **Form editor** (not the spreadsheet).
-2. **Extensions → Apps Script**.
-3. Create a new file `AppsScriptWebhook.gs` and paste in the contents of
-   [`AppsScriptWebhook.gs`](AppsScriptWebhook.gs) from this folder.
-4. Set `WEBHOOK_URL` to your ngrok URL + `/api/webhook/form-submit`, e.g.:
-   `https://xxxx.ngrok-free.app/api/webhook/form-submit`
-5. Set `WEBHOOK_SECRET` to the exact same value as `.env`'s `WEBHOOK_SECRET`.
-6. Save, then run **`installTrigger`** once from the function dropdown —
-   grant permissions when prompted.
-7. Submit the Form — within a second or two, refresh the dashboard's
-   **Exigencies** tab and the new row should appear.
-
-Whenever you restart `ngrok`, its URL changes — just update `WEBHOOK_URL` in
-the Apps Script file and save; no need to reinstall the trigger.
-
-## 5. Configure Settings
-
-In the dashboard's **Settings** tab, fill in:
-- `AdminEmail`, `DefaultCC`
-- `OrgDomain` (e.g. `protego.services`) and/or `FsGroupEmail` — used to
-  authorize submitters, same rule as before
+In the dashboard's **Settings** tab (login required — see Admin Login below), fill in:
+- `SenderEmail` — the one fixed address every outgoing mail comes from
+- `AlertEmail`, `DefaultCC`
 - `ReminderTriggerHour` — restart the server (`Ctrl+C` then `npm start`)
   after changing this so the cron job picks up the new hour
 
-## 6. Add schools and recipients
+Note: anyone can submit the form (no submitter-authorization gate) — every
+submission notifies the department's real recipients AND the submitter gets
+their own confirmation copy.
+
+## 4. Add schools and recipients
 
 In the **Schools** tab: add each school's code + full name (the full name
-must exactly match what the Form's dropdown shows, so submissions route
-correctly), then add each authorized recipient's email under that school.
+must exactly match what the report form's dropdown shows, so submissions
+route correctly), then add each authorized recipient's email under that
+school.
 
-## 7. Daily reminders
+## 5. Daily reminders
 
 The reminder job runs automatically via `node-cron` at `ReminderTriggerHour`,
 as long as `npm start` is running. You can also trigger it manually from the
-**Dashboard** tab's "Run Daily Reminder Job Now" button — useful for testing
-without waiting for the scheduled hour.
+**Exigencies** tab: "Run Reminder Now" sends to every unresolved exigency
+eligible under the automatic rules, or tick specific rows and use "Send
+Reminder to Selected" to send immediately (with an optional custom message)
+regardless of those rules.
 
 ## Notes on "live" and localhost
 
-Right now this runs on your machine only — closing the terminal / restarting
-your computer stops the server (and the ngrok tunnel gets a new URL each
-restart, needing the Apps Script `WEBHOOK_URL` updated). For a permanently
-"always-on" version later, this same code can be deployed to any Node.js
-host (Render, Railway, a VPS, etc.) with the SQLite file swapped for a
-persistent volume or Postgres — nothing else in the architecture needs to
-change.
+Right now this runs on your machine only — closing the terminal stops the
+server. For a permanently "always-on" version later, this same code can be
+deployed to any Node.js host (Render, Railway, a VPS, etc.) with the SQLite
+file swapped for a persistent volume or Postgres — nothing else in the
+architecture needs to change.

@@ -2,9 +2,9 @@
  * server.js
  *
  * Entry point for the standalone Exigency Management module. Runs entirely
- * on localhost with its own SQLite database — no Google Sheets involved.
- * Google Form submissions arrive via the /api/webhook/form-submit endpoint,
- * called by the Apps Script webhook (see AppsScriptWebhook.gs).
+ * on localhost with its own SQLite database — no Google Sheets or Google
+ * Form involved. Submissions come in through the module's own built-in
+ * form at /report.html (see routes/report.js).
  */
 
 const path = require('path');
@@ -14,9 +14,11 @@ const cors = require('cors');
 const cron = require('node-cron');
 
 const { getSetting } = require('./src/services/settingsService');
-const { runDailyReminderJob } = require('./src/services/reminderService');
+const { runDailyReminderJob, sendSelectedReminders } = require('./src/services/reminderService');
 const { sendCriticalErrorEmail } = require('./src/services/emailService');
 const { writeLog } = require('./src/services/logService');
+const { checkForReplies, startReplyWatcher } = require('./src/services/replyService');
+const { requireAdmin } = require('./src/services/authService');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,21 +28,35 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/api/webhook', require('./src/routes/webhook'));
+app.use('/api/report', require('./src/routes/report'));
 app.use('/api/exigencies', require('./src/routes/exigencies'));
 app.use('/api/schools', require('./src/routes/schools'));
 app.use('/api/settings', require('./src/routes/settings'));
+app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/logs', require('./src/routes/logs'));
 app.use('/api/dashboard', require('./src/routes/dashboard'));
 
-app.post('/api/reminders/run-now', async (req, res) => {
+app.post('/api/reminders/run-now', requireAdmin, async (req, res) => {
   try {
     const result = await runDailyReminderJob(APP_URL);
     res.json(result);
   } catch (error) {
     console.error(error);
     await sendCriticalErrorEmail('run-now reminder job', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/reminders/send-selected', requireAdmin, async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(Boolean) : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'No exigency ids provided.' });
+  try {
+    const result = await sendSelectedReminders(ids, APP_URL);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    await sendCriticalErrorEmail('send-selected reminder job', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -51,13 +67,24 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Exigency Management module running at ${APP_URL}`);
 
   // Re-schedule the daily reminder cron at whatever hour is currently in
   // Settings; re-run scheduleReminderCron() after changing the hour via the
   // Settings UI + restarting the server to pick up the new time.
   scheduleReminderCron();
+
+  // Watch the inbox for replies in near-real-time via IMAP IDLE (picks up
+  // new mail within seconds instead of waiting for a poll interval). Runs
+  // forever, reconnecting on its own if the connection drops.
+  startReplyWatcher().catch((error) => console.error('Reply watcher crashed:', error));
+
+  // Safety net: also poll every 5 minutes in case IDLE silently stops
+  // without erroring (network changes, sleep/wake, etc).
+  cron.schedule('*/5 * * * *', () => {
+    checkForReplies().catch((error) => console.error('Reply check failed:', error));
+  });
 });
 
 let currentTask = null;

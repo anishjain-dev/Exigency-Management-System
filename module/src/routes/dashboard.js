@@ -7,8 +7,11 @@
 
 const express = require('express');
 const db = require('../db');
+const { requireAdmin } = require('../services/authService');
 
 const router = express.Router();
+
+router.use(requireAdmin);
 
 function todayStr() {
   const d = new Date();
